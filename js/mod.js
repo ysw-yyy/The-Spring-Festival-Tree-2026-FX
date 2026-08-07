@@ -6,7 +6,7 @@ let modInfo = {
   modFiles: ["layers.js", "tree.js"],
 
   discordName: "B站@QqQe308",
-  discordLink: "https://b23.tv/TVygZjo",
+  discordLink: "https://m.bilibili.com/space/3493117070149692",
   initialStartPoints: new Decimal(0),
   offlineLimit: 1,
 };
@@ -17,6 +17,12 @@ let VERSION = {
 };
 
 let changelog = `
+<h2>v0.8 Ending 2026/02/26 ~ 2026/08/05<br></h2>
+<h3>- 添加第10～12个层级：经验、大气、团聚<br>
+- 修复一些bug与显示问题<br>
+- 更改了距离系统<br>
+- 游戏正式完结<br>
+- 游戏结局：距离达到 0 千米<br><br></h3>
 <h2>v0.7 Yield 2026/02/20 ~ 2026/02/26<br></h2>
 <h3>- 添加第9个层级：产量<br>
 - 修复一些bug与显示问题，手机端按钮不再会双击放大<br>
@@ -45,7 +51,7 @@ let changelog = `
 - 游戏结局：1e750 航迹<br><br></h3>
 `;
 
-let winText = `春节快乐!!!!!!!!!!!<br>后续的更新很快就来！`;
+let winText = `恭喜通关，春节快乐！`;
 
 var doNotCallTheseFunctionsEveryTick = ["blowUpEverything"];
 
@@ -102,6 +108,8 @@ function getPointClick() {
   if (m.gte("ee6")) m = m.div("ee6").pow(0.1).mul("ee6");
   if (inChallenge("e", 23)) m = m.log(1.00000000000001);
   if (inChallenge("e", 23) && hm("Y", 1)) m = m.mul(10);
+  if (m.gte("ee6")&&hu("E",12)) m = m.div("ee6").pow(0.5).mul("ee6");
+  if (hu("P", 43)) m = m.pow(2);
   return m;
 }
 
@@ -109,18 +117,23 @@ function addedPlayerData() {
   return {
     devSpeed: new Decimal(1),
     realTime: new Decimal(0),
+    test1: n(0),
+    test2: n(0)
   };
 }
 
 var displayThings = [
   function () {
-    let a = "";
-    return a;
+   let a=player.d.distance
+       if(a.lte(0.01)) a=a.mul(63240)
+       if(a.lte(0.06324)) a=a.mul(1.5e8)
+    let text = "当前距离:"+format(a,4)+player.d.unit
+    return text;
   },
 ];
 
 function isEndgame() {
-  return player.points.gte("1e1021000");
+  return player.d.distance.eq(0);
 }
 
 var backgroundStyle = {};
@@ -129,7 +142,9 @@ function maxTickLength() {
   return 1e300;
 }
 
-function fixOldSave(oldVersion) {}
+function fixOldSave(oldVersion) {
+ 
+}
 
 function n(a) {
   return new Decimal(a);
@@ -179,7 +194,7 @@ function createUpgrade(
   return {
     title,
     description,
-    cost: n(costValue),
+    cost(){return hu("E",33)?n(1/0):n(costValue)},
     branches: branches || [],
     currencyDisplayName: "中子定理",
     currencyInternalName: "theorems",
@@ -187,7 +202,7 @@ function createUpgrade(
     unlocked: true,
     canAfford() {
       // 检查中子定理是否足够
-      if (player.n.theorems.lt(this.cost)) return false;
+      if (player.n.theorems.lt(this.cost())) return false;
       // 检查前置条件：如果 branches 不为空，则至少需要拥有其中一个前置升级
       if (this.branches.length > 0) {
         let hasAny = false;
@@ -592,7 +607,7 @@ const boosts = {
   },
   29: {
     id: 29,
-    title: "总览全局",
+    title: "总揽全局",
     name: function () {
       return "全局速率^" + format(this.effect());
     },
@@ -684,3 +699,45 @@ function ye(id) {
   //yieldeffect
   return boosts[id].effect();
 }
+
+
+function getCurrentLocation(dist=player.d.distance) {
+    if (dist.gte(0.5)) return "奥尔特云（外缘）";
+    else if (dist.gte(0.1)) return "奥尔特云（内缘）";
+    else if (dist.gte(0.01)) return "柯伊伯带";
+    else if (dist.gte(0.001)) return "冥王星及矮行星区域";
+    else if (dist.gte(0.0005)) return "海王星轨道";
+    else if (dist.gte(0.0003)) return "天王星轨道";
+    else if (dist.gte(0.00015)) return "土星轨道";
+    else if (dist.gte(0.00007)) return "木星轨道";
+    else if (dist.gte(0.00003)) return "小行星带";
+    else if (dist.gte(0.00001)) return "火星轨道";
+    else if (dist.gte(0.0000005)) return "火星与地球之间";
+    else if (dist.gte(0.000000001)) return "近地轨道";
+    //0.00001ly≈0.6324AU
+    else return "地球轨道";
+}
+function getNextLocation() {
+    let dist = player.d.distance; // 单位为光年
+    if (dist.gte(0.5)) return "0.5 光年";
+    else if (dist.gte(0.1)) return "0.1 光年";
+    else if (dist.gte(0.01)) return "0.01 光年";
+    else if (dist.gte(0.001)) return "63.24 天文单位";
+    else if (dist.gte(0.0005)) return "31.62 天文单位";
+    else if (dist.gte(0.0003)) return "18.972 天文单位";
+    else if (dist.gte(0.00015)) return "9.486 天文单位";
+    else if (dist.gte(0.00007)) return "4.4268 天文单位";
+    else if (dist.gte(0.00003)) return "1.8972 天文单位";
+    else if (dist.gte(0.00001)) return "0.6324 天文单位";
+    else if (dist.gte(0.0000005)) return "4,743,000 千米";
+    else if (dist.gte(0.000000001)) return "948.6 千米";
+    //0.00001ly≈0.6324AU
+    else return "0";
+}
+   function upgradeReset() {
+      player.e.maxpoints=[n(0), n(0), n(0), n(0), n(0), n(0), n(0), n(0), n(0)];
+   player.w.essence=[n(0), n(0), n(0), n(0), n(0), n(0), n(0), n(0), n(0)];
+   doReset("Y", true);
+   player.Y.points=n(0)
+   layers.Y.onPrestige();
+    }

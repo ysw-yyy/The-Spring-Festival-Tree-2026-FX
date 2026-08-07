@@ -252,7 +252,7 @@ function loadVue() {
 			<span v-if="tmp[layer].passiveGeneration"><br>你正在获得 {{format(tmp[layer].resetGain.times(tmp[layer].passiveGeneration))}} {{tmp[layer].resource}} 每秒</span>
 			<br><br>
 			<span v-if="tmp[layer].showBest">你的最佳 {{tmp[layer].resource}} 是 {{formatWhole(player[layer].best)}}<br></span>
-			<span v-if="tmp[layer].showTotal">你总共有{{formatWhole(player[layer].total)}} {{tmp[layer].resource}}<br></span>
+			<span v-if="tmp[layer].showTotal">你总共有 {{formatWhole(player[layer].total)}} {{tmp[layer].resource}}<br></span>
 		</div>
 		`,
   });
