@@ -8263,7 +8263,7 @@ addLayer('t', {
     introBox: {
       title: 'Test',
       body() {
-        return '经典测试层级，QqQe308树的标配';
+        return '经典测试层级，QqQe308树的标配<br>如遇问题或需要进行调试，可以查看下方按钮';
       },
     },
   },
@@ -8323,7 +8323,7 @@ addLayer('t', {
       title() {
         return '软重置';
       },
-      display: '如遇bug或炸档，请暂停游戏，并点击以重置各层级资源。',
+      display: '如遇bug或炸档，请暂停游戏，并点击以重置部分层级资源。',
       onClick() {
         player.points = n(0);
         player.h.points = n(0);
@@ -8361,6 +8361,21 @@ addLayer('t', {
       display: '如果距离出现错乱或是进度过快，请点此重置距离，它不会重置任何其他东西',
       onClick() {
        player.d.distance=n(308)
+      },
+      canClick() {
+        return true;
+      },
+      unlocked() {
+        return true;
+      },
+    },
+    14: {
+      title() {
+        return '回到主界面';
+      },
+      display: '如果无法正常回到主界面，请点击这里',
+      onClick() {
+       player.navTab="tree-tab"
       },
       canClick() {
         return true;
