@@ -7798,6 +7798,7 @@ addLayer('E', {
     }
     if (hu('E', 11)) player.E.points = player.E.points.add(tmp.E.pointsec.mul(a));
     if (hu('E', 11)) player.E.total = player.E.total.add(tmp.E.pointsec.mul(a));
+    if(player.d.distance.lte(1e-10)&&player.E.buyables[11].lt(11)) player.d.distance=n(308)
   },
   upgrades: {
     11: {
@@ -8345,6 +8346,21 @@ addLayer('t', {
           player.e.points = n(0);
           player.w.points = n(0);
         }
+      },
+      canClick() {
+        return true;
+      },
+      unlocked() {
+        return true;
+      },
+    },
+    13: {
+      title() {
+        return '距离重置';
+      },
+      display: '如果距离出现错乱或是进度过快，请点此重置距离，它不会重置任何其他东西',
+      onClick() {
+       player.d.distance=n(308)
       },
       canClick() {
         return true;
