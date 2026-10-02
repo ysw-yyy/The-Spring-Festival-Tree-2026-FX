@@ -1,5 +1,6 @@
 # 2026 春节树 · 深空特效版
 
+# *鸬鹚，你真是有一百亿呀。鸬鹚，你真是有一百亿呀。鸬鹚，你真是有一百亿呀。鸬鹚，你真是有一百亿呀。鸬鹚，你真是有一百亿呀。鸬鹚，你真是有一百亿呀。*
 《2026 春节树》是一个基于 **The-Modding-Tree** 的中文增量游戏（incremental game）。
 本仓库是 **[QqQe308/The-Spring-Festival-Tree-2026](https://github.com/QqQe308/The-Spring-Festival-Tree-2026)
 的官方 fork**，加了深空视觉特效层与性能优化，**游戏玩法与原版一致，未做改动**。
