@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>特效性能对照台 · 深空极光</title>
+
+<!-- 复用游戏本体的基础样式（提供 .can / .locked 等），再叠加特效层 -->
+<link rel="stylesheet" type="text/css" href="css/system-style.css" />
+<link rel="stylesheet" type="text/css" href="css/general-style.css" />
+<link rel="stylesheet" type="text/css" href="css/effects.css" />
+
+<style>
+  body {
+    background: #0f0f0f;
+    color: #dfdfdf;
+    margin: 0;
+    --background: #0f0f0f;
+    --color: #dfdfdf;
+    --points: #ffffff;
+  }
+
+  /* 复刻游戏成就页的负载：一屏上百个可点击方块 */
+  #board {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 300px 16px 40px 16px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .cell {
+    width: 104px;
+    height: 62px;
+    border-radius: 22%;
+    border: 2px solid rgba(0, 0, 0, 0.125);
+    background-color: #bf8f8f;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .cell.can {
+    background-color: #77bf5f;
+  }
+
+  /* HUD */
+  #hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999999;
+    background: rgba(0, 0, 0, 0.86);
+    border-bottom: 1px solid #2a2a2a;
+    padding: 10px 14px;
+    font-family: Consolas, monospace;
+    font-size: 13px;
+    text-align: left;
+    line-height: 1.7;
+  }
+
+  #hud b { color: #7a5cff; }
+
+  .btn {
+    display: inline-block;
+    margin: 2px 4px;
+    padding: 3px 10px;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #1a1a1a;
+    color: #dfdfdf;
+    cursor: pointer;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+  }
+
+  .btn:hover { border-color: #7a5cff; color: #fff; }
+  .btn.on { background: #4dffd2; color: #06231c; border-color: #4dffd2; }
+
+  #fps { font-size: 30px; color: #4dffd2; }
+  .warn { color: #ff6b6b; }
+  .ok { color: #4dffd2; }
+  #hint { color: #888; text-align: left; }
+</style>
+</head>
+
+<body>
+  <div id="board"></div>
+
+  <div id="hud">
+    <div>
+      <span id="fps">--</span> fps
+      <span id="verdict"></span>
+      &nbsp;|&nbsp; 最慢帧 <span id="worst">--</span> ms
+      &nbsp;|&nbsp; 本层绘制 <span id="draw">--</span> ms/帧
+      &nbsp;|&nbsp; 画质档 <span id="qual">--</span>
+      &nbsp;|&nbsp; 元素 <span id="cells">--</span>
+    </div>
+    <div>
+      <b>模式：</b>
+      <span class="btn" data-mode="all">全部</span>
+      <span class="btn" data-mode="canvas">只 canvas 层</span>
+      <span class="btn" data-mode="css">只 CSS 发光</span>
+      <span class="btn" data-mode="off">全关（基线）</span>
+      &nbsp;<b>性能预设：</b>
+      <span class="btn" data-preset="高">高</span>
+      <span class="btn" data-preset="中">中</span>
+      <span class="btn" data-preset="低">低</span>
+      <span class="btn" data-preset="极低">极低</span>
+      &nbsp;<b>交互特效：</b>
+      <span class="btn" data-layer="inputFx">点击回弹 / 升级闪光</span>
+      <span class="btn" data-layer="idleShimmer">闲置按钮闪光</span>
+      <span class="btn" data-layer="unlockBurst">升级粒子爆发</span>
+    </div>
+    <div>
+      <b>逐层开关（定位是哪一层在吃性能）：</b>
+      <span class="btn" data-layer="drawStarsLayer">星场</span>
+      <span class="btn" data-layer="drawAuroraLayer">极光</span>
+      <span class="btn" data-layer="drawNebulaLayer">canvas 星云</span>
+      <span class="btn" data-layer="drawParticles">流星/星尘</span>
+      <span class="btn" data-layer="cssNebula">CSS 星云</span>
+      <span class="btn" data-layer="cheapSky">廉价星云替代</span>
+    </div>
+    <div>
+      <b>压力：</b>
+      <span class="btn" id="stress">连发粒子爆发</span>
+      <span class="btn" id="resize">窗口抖动 ×6</span>
+      &nbsp;<b>元素数：</b>
+      <span class="btn" data-cells="40">40</span>
+      <span class="btn" data-cells="150">150</span>
+      <span class="btn" data-cells="400">400</span>
+    </div>
+    <div id="hint">
+      <b>怎么定位：</b>先点「全关」记基线；再点「只 canvas 层」，然后在上面把 星场 / 极光 / 星云 / 流星
+      逐个点掉，看哪个一关 fps 就回来——那就是元凶。<br>
+      <b>读表：</b>「本层绘制」是特效真正的绘制耗时（单位 ms/帧），掉帧时它会明显升高；fps 受显示器刷新率影响，看趋势即可。
+    </div>
+  </div>
+
+  <script>
+    /* ---------- 生成对照用的可点击元素 ---------- */
+    const board = document.getElementById("board");
+    function buildCells(n) {
+      board.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < n; i++) {
+        const d = document.createElement("div");
+        // 用真实游戏的类名，这样对照台的负载与线上一致：
+        //   upg + can     → 可购买（有斜向流光）
+        //   upg           → 闲置（有偶发闪光）
+        //   upg + bought  → 已获得（有常驻辉光）
+        //   achievement + locked → 锁定
+        d.className =
+          i % 4 === 0 ? "cell upg can"
+          : i % 4 === 1 ? "cell upg"
+          : i % 4 === 2 ? "cell upg bought"
+          : "cell achievement locked";
+        d.textContent = "L" + (i + 1);
+        frag.appendChild(d);
+      }
+      board.appendChild(frag);
+      document.getElementById("cells").textContent = n;
+    }
+    buildCells(150);
+
+    /* ---------- 真实帧率测量 ---------- */
+    let frames = 0;
+    let t0 = performance.now();
+    let worst = 0;
+    let prev = performance.now();
+
+    function measure(now) {
+      frames++;
+      const dt = now - prev;
+      prev = now;
+      if (dt > worst) worst = dt;
+
+      const span = now - t0;
+      if (span >= 1000) {
+        const fps = Math.round((frames * 1000) / span);
+        document.getElementById("fps").textContent = fps;
+        document.getElementById("worst").textContent = worst.toFixed(1);
+        const v = document.getElementById("verdict");
+        if (fps >= 55) { v.textContent = "流畅"; v.className = "ok"; }
+        else if (fps >= 40) { v.textContent = "尚可"; v.className = ""; }
+        else { v.textContent = "卡顿"; v.className = "warn"; }
+        frames = 0;
+        t0 = now;
+        worst = 0;
+      }
+
+      const fx = window.deepSpaceEffects;
+      if (fx && fx.perf) {
+        const p = fx.perf();
+        document.getElementById("draw").textContent = p.drawAvgMs;
+        document.getElementById("qual").textContent =
+          p.qualityScale + "（档 " + p.scaleIndex + "）";
+      }
+      requestAnimationFrame(measure);
+    }
+    requestAnimationFrame(measure);
+
+    /* ---------- 模式切换 ---------- */
+    function paintMode(m) {
+      document.querySelectorAll("[data-mode]").forEach((b) => {
+        b.classList.toggle("on", b.dataset.mode === m);
+      });
+    }
+    document.querySelectorAll("[data-mode]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const m = b.dataset.mode;
+        // 模式切换需要重新 boot，直接带上参数刷新最干净
+        const url = new URL(location.href);
+        url.searchParams.set("fx", m);
+        location.href = url.toString();
+      });
+    });
+
+    /* ---------- 逐层开关：即时生效，不用刷新 ---------- */
+    function paintLayers() {
+      const fx = window.deepSpaceEffects;
+      if (!fx) return;
+      const g = fx.get();
+      document.querySelectorAll("[data-layer]").forEach((b) => {
+        b.classList.toggle("on", !!g[b.dataset.layer]);
+      });
+    }
+    document.querySelectorAll("[data-layer]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const fx = window.deepSpaceEffects;
+        if (!fx) return;
+        const key = b.dataset.layer;
+        fx.set(key, !fx.get()[key]);
+        paintLayers();
+      });
+    });
+    paintLayers();
+
+    /* ---------- 性能预设 ---------- */
+    document.querySelectorAll("[data-preset]").forEach((b) => {
+      b.addEventListener("click", () => {
+        b.classList.add("on");
+        const fx = window.deepSpaceEffects;
+        if (fx && fx.preset) {
+          fx.preset(b.dataset.preset);
+          console.log("已应用预设:", b.dataset.preset, JSON.stringify(fx.get()));
+        }
+        setTimeout(() => b.classList.remove("on"), 400);
+      });
+    });
+
+    /* ---------- 元素数量切换 ---------- */
+    document.querySelectorAll("[data-cells]").forEach((b) => {
+      b.addEventListener("click", () => buildCells(Number(b.dataset.cells)));
+    });
+
+    /* ---------- 压力测试 ---------- */
+    document.getElementById("stress").addEventListener("click", () => {
+      const fx = window.deepSpaceEffects;
+      if (!fx || !fx.burst) return;
+      let i = 0;
+      const timer = setInterval(() => {
+        for (let k = 0; k < 6; k++) {
+          fx.burst(Math.random() * innerWidth, Math.random() * innerHeight);
+        }
+        if (++i >= 20) clearInterval(timer);
+      }, 40);
+    });
+
+    /* ---------- 窗口抖动（考察 resize 重建开销） ---------- */
+    document.getElementById("resize").addEventListener("click", () => {
+      let i = 0;
+      const timer = setInterval(() => {
+        window.dispatchEvent(new Event("resize"));
+        if (++i >= 6) clearInterval(timer);
+      }, 300);
+    });
+
+    /* ---------- 初始化高亮 ---------- */
+    const cur = new URLSearchParams(location.search).get("fx") || "all";
+    paintMode(cur);
+  </script>
+
+  <!-- 特效层本体 -->
+  <script src="js/effects.js"></script>
+</body>
+</html>

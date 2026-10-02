@@ -1,0 +1,1769 @@
+/* =============================================================================
+   effects.css —— 深空 · 极光特效层
+   -----------------------------------------------------------------------------
+   本文件与原游戏样式相互独立，只增加视觉表现，不改动任何原有布局逻辑。
+   全部配色都基于游戏已有的 CSS 变量（--color / --points / --background /
+   --background_tooltip），所以切换主题时特效会跟着变色。
+
+   作用域：绝大多数规则都以 `body.ds-glow` 开头。effects.js 会在 body 上添加
+   这个 class，因此不需要任何包装元素就能整体开关 CSS 特效
+   （用 URL 参数 ?fx=css / ?fx=off 即可关闭）。
+
+   性能约定（重要）：
+   不要在这里动画 box-shadow / filter / text-shadow。它们每帧都要重新光栅化
+   模糊，元素一多就会把主线程拖死——这正是最初版本卡顿的主因。
+   需要脉动效果时，一律用「固定阴影模板的伪元素 + 只动 opacity/transform」，
+   这两个属性由合成器处理，不占主线程。
+
+   想降强度：改文件末尾「强度开关」区块里的变量。
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. 深空底噪与暗角
+   ------------------------------------------------------------------------ */
+
+/* 缓慢漂移的星云色雾 + 顶部极光辉光，叠在 body 背景之上、canvas 之下。
+   ---------------------------------------------------------------------------
+   性能要点（实测结论，非常重要）：
+   这里「绝对不要」用 filter: blur()。一张整屏固定层带 blur 时，合成器每帧都要
+   重新跑一次全屏高斯模糊——实测这一条规则就让帧率从 144 掉到 70，
+   是本项目最贵的一处（远超 canvas 层所有特效之和）。
+   做法：用多段柔和径向渐变手工造出「模糊般」的过渡。渐变本身就是渐隐的，
+   观感几乎一致，但完全没有滤镜开销。
+   ------------------------------------------------------------------------ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -12%;
+  pointer-events: none;
+  z-index: -10000;
+  background:
+    radial-gradient(
+      42% 34% at 22% 18%,
+      color-mix(in srgb, var(--color) 22%, transparent) 0%,
+      color-mix(in srgb, var(--color) 13%, transparent) 30%,
+      color-mix(in srgb, var(--color) 5%, transparent) 58%,
+      transparent 80%
+    ),
+    radial-gradient(
+      38% 30% at 78% 74%,
+      color-mix(in srgb, var(--points) 17%, transparent) 0%,
+      color-mix(in srgb, var(--points) 10%, transparent) 32%,
+      transparent 76%
+    ),
+    radial-gradient(
+      60% 26% at 50% 0%,
+      color-mix(in srgb, var(--color) 14%, transparent) 0%,
+      color-mix(in srgb, var(--color) 7%, transparent) 42%,
+      transparent 100%
+    );
+  opacity: 0.9;
+  /* 只动画 transform/opacity：这两个由合成器处理 */
+  animation: ds-nebula-drift 64s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+/* 星云底噪：可以用 body.ds-nosky 单独关掉（用于定位它的开销） */
+body.ds-nosky::before {
+  display: none;
+}
+
+@keyframes ds-nebula-drift {
+  0% {
+    transform: translate3d(-2.5%, -1.5%, 0) scale(1.02);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate3d(1.5%, 2.5%, 0) scale(1.07);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(3%, -2%, 0) scale(1.03);
+    opacity: 0.75;
+  }
+}
+
+/* 暗角，让中心内容更聚焦（保持克制，别把星云压掉） */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -9999;
+  background: radial-gradient(
+    130% 110% at 50% 50%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.38) 100%
+  );
+  mix-blend-mode: multiply;
+}
+
+/* 特效画布：位于 treeCanvas(-999) 之下、bg2(-9009) 之上。
+   两张画布分工：极光层（很少重绘）在主粒子层下方。 */
+#deepSpaceCanvas,
+#deepSpaceAurora {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#deepSpaceAurora {
+  z-index: -1001;
+}
+
+#deepSpaceCanvas {
+  z-index: -1000;
+}
+
+/* 能量粒子层 —— 必须待在「游戏 UI 之上」，否则粒子落在能量条范围内会被条整个盖住。
+   ---------------------------------------------------------------------------
+   层级对照（实测自游戏自己的 css）：
+     bars.css  .barBG  2  /  .fill  3  /  .overlayTextContainer  6
+     components.css  tooltip  7
+     misc.css  侧栏  20000
+     popup.css 弹窗  99999+
+   所以取 6：盖住能量条自身，但仍在 tooltip 与弹窗之下，不糊住任何文字。
+   pointer-events: none 保证它不挡点击（与底层星场画布同理）。 */
+#deepSpaceEnergy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* ---------------------------------------------------------------------------
+   2. 可点击元素的辉光与呼吸
+   ---------------------------------------------------------------------------
+   见文件开头的性能约定：这里只用伪元素的 opacity 做脉动。
+   ------------------------------------------------------------------------ */
+
+body.ds-glow .can,
+body.ds-glow .tabButton {
+  position: relative;
+}
+
+/* 里程碑 / 挑战这些不是 .can，但也需要承载光晕伪元素 */
+body.ds-glow .milestone,
+body.ds-glow .milestoneDone,
+body.ds-glow .challenge {
+  position: relative;
+}
+
+/* 伪元素分配（重要，三者不能抢同一个）：
+     ::after  → 常驻/变化的光晕（呼吸、已获得辉光、解锁闪光）+ 闲置闪光
+                （闲置闪光用 opacity 叠加在同一层上，不额外占伪元素）
+     ::before → 解锁冲击波（只有解锁那一瞬间才生成）
+   之前把闲置闪光也放在 ::before，和冲击波互相覆盖；放在 ::after 又会盖掉光晕，
+   所以改为「同层叠加、用透明度区分」，而不是再抢一个伪元素。 */
+body.ds-glow .can::after,
+body.ds-glow .tabButton::after,
+body.ds-glow .milestone::after,
+body.ds-glow .milestoneDone::after,
+body.ds-glow .challenge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  /* 关键：z-index 0 —— 让光晕夹在「父元素背景」与「父元素内容」之间。
+     若不加，伪元素会画在内容（含 .tooltip 的文字）之上，
+     造成悬停说明被自己的光晕糊住，看起来像被遮挡。 */
+  z-index: 0;
+  /* 固定阴影模板：动画只改 opacity，不做每帧重绘 */
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--points) 70%, transparent),
+    0 0 46px color-mix(in srgb, var(--color) 55%, transparent);
+  will-change: opacity;
+}
+
+body.ds-glow .treeNode::after,
+body.ds-glow .treeButton::after,
+body.ds-glow .smallNode::after {
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--points) 50%, transparent),
+    0 0 26px color-mix(in srgb, var(--color) 32%, transparent);
+}
+
+@keyframes ds-glow-breathe {
+  from {
+    opacity: 0.42;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ds-glow-pulse {
+  from {
+    opacity: 0.32;
+  }
+  to {
+    opacity: 0.88;
+  }
+}
+
+/* 侧栏与树节点：轻微呼吸（数量少，可以明显一点） */
+body.ds-glow .treeNode.can::after,
+body.ds-glow .treeButton.can::after,
+body.ds-glow .smallNode.can::after {
+  animation: ds-glow-breathe var(--ds-breathe-speed) ease-in-out infinite
+    alternate;
+}
+
+/* 大批量元素（升级/购买/成就/方块）：更轻更慢的脉冲，避免一屏上百个同时脉动 */
+body.ds-glow .upg.can::after,
+body.ds-glow .buyable.can::after,
+body.ds-glow .tile.can::after {
+  animation: ds-glow-pulse var(--ds-pulse-speed) ease-in-out infinite alternate;
+}
+
+body.ds-glow .can:nth-of-type(2n)::after {
+  animation-delay: -1.1s;
+}
+body.ds-glow .can:nth-of-type(3n)::after {
+  animation-delay: -2.2s;
+}
+body.ds-glow .can:nth-of-type(5n)::after {
+  animation-delay: -0.6s;
+}
+
+/* 悬停：静态强化阴影（只触发一次，不是每帧动画） */
+body.ds-glow .can:hover {
+  filter: brightness(1.16) saturate(1.2);
+  z-index: 8;
+}
+
+body.ds-glow .treeNode.can:hover,
+body.ds-glow .treeButton.can:hover {
+  box-shadow:
+    var(--hqProperty2a),
+    0 0 24px var(--points),
+    0 0 60px color-mix(in srgb, var(--color) 60%, transparent) !important;
+}
+
+body.ds-glow .upg.can:hover,
+body.ds-glow .buyable.can:hover,
+body.ds-glow .tile.can:hover,
+body.ds-glow .achievement.can:hover,
+body.ds-glow .smallUpg.can:hover,
+body.ds-glow .longUpg.can:hover,
+body.ds-glow .opt.can:hover {
+  box-shadow:
+    var(--hqProperty2a),
+    0 0 22px color-mix(in srgb, var(--points) 85%, transparent),
+    0 0 52px color-mix(in srgb, var(--color) 45%, transparent);
+}
+
+body.ds-glow .can:hover::after {
+  opacity: 1;
+  animation: none;
+}
+
+/* 正在播解锁闪光的元素，暂时不要闲置闪光。
+   两者都挂在 ::after 上，而闲置闪光的选择器带一长串 :not()，
+   特异性可能压过 .ds-unlocked::after，把闪光盖掉。
+   显式排除，不依赖书写顺序。 */
+body.ds-glow .upg.ds-unlocked::after,
+body.ds-glow .buyable.ds-unlocked::after,
+body.ds-glow .tile.ds-unlocked::after,
+body.ds-glow .upg.ds-unlocked::before,
+body.ds-glow .buyable.ds-unlocked::before,
+body.ds-glow .tile.ds-unlocked::before {
+  animation: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   2b. 交互动效：点击回弹 / 数值脉冲 / 成就解锁
+   ---------------------------------------------------------------------------
+   全部只动 transform 与 opacity（合成器处理），不使用任何会触发重绘的属性。
+   ------------------------------------------------------------------------ */
+
+/* 点击回弹：只用独立的 `scale` 属性，不碰 `transform`。
+   ---------------------------------------------------------------------------
+   为什么必须这样写（踩过的坑）：
+   游戏的 hover 放大是 `.can:hover { transform: scale(1.15) }`。如果回弹也用
+   transform 做动画，动画一旦结束就会把 transform 交还给 hover 规则，
+   视觉上就是「跳一下 → 直接停住」，两个效果互相打架。
+   `scale` 是独立于 `transform` 的属性（Chrome 104+ / Safari 14.1+ / Firefox 72+），
+   优先级又高于普通规则，所以：悬停时仍保持 1.15，按下时在 1.15 基础上回弹。
+   幅度也刻意收敛（原来 0.93/1.07 视觉过大）。
+   ------------------------------------------------------------------------ */
+@keyframes ds-pop {
+  0% {
+    scale: 1;
+  }
+  35% {
+    scale: 0.955;
+  }
+  70% {
+    scale: 1.025;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+body.ds-glow .ds-pop {
+  animation: ds-pop 0.32s cubic-bezier(0.33, 1, 0.68, 1) !important;
+}
+
+/* hover 放大 / 缩小的平滑过渡。
+   全局 transition-duration 为了性能已改成 0s，所以必须在这里显式声明，
+   否则 hover 就是「瞬间跳大」，很突兀。只过渡 transform/scale：
+   这两个由合成器处理，开销可忽略，不会把之前修好的性能又还回去。 */
+body.ds-glow .can,
+body.ds-glow .clickable,
+body.ds-glow button,
+body.ds-glow .tabButton,
+body.ds-glow .treeNode,
+body.ds-glow .upg,
+body.ds-glow .buyable,
+body.ds-glow .achievement,
+body.ds-glow .tile,
+body.ds-glow .smallUpg,
+body.ds-glow .longUpg,
+body.ds-glow .opt {
+  transition:
+    transform 0.2s cubic-bezier(0.33, 1, 0.68, 1),
+    scale 0.2s cubic-bezier(0.33, 1, 0.68, 1),
+    filter 0.2s ease-out;
+}
+
+/* 升级 / 解锁成功的一次性闪光：放大回弹 + 光晕爆开。
+   由 JS 边沿触发（只在状态翻转那一刻加 .ds-unlocked），不会一直重播。
+
+   刻意不用 filter: brightness() 做「白光一闪」——filter 每帧都要重新栅格化，
+   属于本文件开头明令避免的属性。改用 scale + 伪元素 opacity：
+   视觉上同样是「猛地一亮再回落」，但全程只走合成器。
+
+   结束状态的 opacity 特意写 0.45，与「已获得常驻辉光」的值一致，
+   这样闪光淡出时不会突然从 1 掉到 0.45，而是平滑落到常驻亮度。 */
+/* 升级 / 解锁成功：三段式反馈，不再是「单纯放大一下」
+     ① 冲击波 —— 由 canvas 绘制（见 effects.js 的 spawnShockwave），
+        不占伪元素、也不产生重绘，因为 ::before / ::after 都已被占用
+     ② 放大回弹 —— 元素本身轻微弹一下（scale）
+     ③ 光晕爆开 —— 挂在 ::after 上，与常驻辉光同层、用透明度过渡 */
+@keyframes ds-unlocked {
+  0% {
+    scale: 1;
+  }
+  22% {
+    scale: 1.18;
+  }
+  55% {
+    scale: 1.04;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+body.ds-glow .ds-unlocked {
+  animation: ds-unlocked 0.76s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 9;
+}
+
+body.ds-glow .ds-unlocked::after {
+  animation: ds-unlocked-glow 0.76s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes ds-unlocked-glow {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+
+/* 刚刚变得买得起：轻轻脉冲一下，提示「现在可以买了」 */
+@keyframes ds-afford {
+  0% {
+    scale: 1;
+  }
+  45% {
+    scale: 1.07;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+body.ds-glow .ds-afford {
+  animation: ds-afford 0.7s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* 已获得的升级 / 成就：常驻柔和辉光，一眼能看出哪些拿到手了。
+   只用静态阴影 + 静态透明度，没有每帧动画，零持续开销。 */
+body.ds-glow .upg.bought::after,
+body.ds-glow .achievement.done::after,
+body.ds-glow .tile.bought::after,
+body.ds-glow .buyable.bought::after,
+body.ds-glow .milestoneDone::after,
+body.ds-glow .challenge.done::after {
+  opacity: 0.45;
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--points) 60%, transparent),
+    0 0 40px color-mix(in srgb, var(--color) 40%, transparent);
+}
+
+/* 注：成就 / 里程碑弹窗的入场动画统一写在 §6「弹窗 / 标签按钮 / 侧栏」里。
+   这里原先还有一条 `body.ds-glow .popup { animation: ds-popup-pop ... both }`，
+   与 §6 的选择器完全相同 —— 特异性一样，靠书写顺序决出胜负（§6 赢），
+   等于埋了个「改半天没反应」的坑。已删除，关键帧 ds-popup-pop 一并移除。 */
+
+/* ---------------------------------------------------------------------------
+   2c. 两种「可以操作了」的高亮，刻意做成一眼能区分
+
+     琥珀金色 + 呼吸 = 该层级可以重置了（游戏类 .resetNotify）
+     冰蓝色   + 呼吸 = 该层级里有新的升级可购买（游戏类 .notify）
+
+   为什么必须带 !important：
+   游戏在 systemComponents.js 里用内联 style 给这两个类写了
+   `box-shadow: var(--hqProperty2a), 0 0 20px <glowColor>`，
+   内联样式优先级高于外部样式表，不加 !important 根本盖不住。
+   ------------------------------------------------------------------------ */
+
+@keyframes ds-layer-reset {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ds-layer-upgrade {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+/* 可重置：琥珀金，节奏稍慢，像在「蓄能」 */
+body.ds-glow .treeNode.resetNotify,
+body.ds-glow .treeButton.resetNotify,
+body.ds-glow .tabButton.resetNotify {
+  box-shadow:
+    var(--hqProperty2a),
+    0 0 14px rgba(255, 190, 70, 0.95),
+    0 0 40px rgba(255, 160, 40, 0.5) !important;
+}
+
+body.ds-glow .treeNode.resetNotify::after,
+body.ds-glow .treeButton.resetNotify::after,
+body.ds-glow .tabButton.resetNotify::after {
+  opacity: 0.9;
+  box-shadow:
+    0 0 16px rgba(255, 196, 80, 0.95),
+    0 0 44px rgba(255, 150, 30, 0.55);
+  animation: ds-layer-reset 1.9s ease-in-out infinite alternate;
+}
+
+/* 有新升级可买：冰蓝，节奏稍快，提示「去看一眼」 */
+body.ds-glow .treeNode.notify,
+body.ds-glow .treeButton.notify,
+body.ds-glow .tabButton.notify {
+  box-shadow:
+    var(--hqProperty2a),
+    0 0 14px rgba(120, 215, 255, 0.95),
+    0 0 40px rgba(70, 170, 255, 0.5) !important;
+}
+
+body.ds-glow .treeNode.notify::after,
+body.ds-glow .treeButton.notify::after,
+body.ds-glow .tabButton.notify::after {
+  opacity: 0.85;
+  box-shadow:
+    0 0 16px rgba(130, 220, 255, 0.95),
+    0 0 44px rgba(70, 170, 255, 0.55);
+  animation: ds-layer-upgrade 1.4s ease-in-out infinite alternate;
+}
+
+/* 两者同时成立时（既该重置、又有新升级）：金色占主导，另加一圈冰蓝内边，
+   这样不会互相盖掉、也仍然看得出「两件事都能做」。 */
+body.ds-glow .resetNotify.notify {
+  box-shadow:
+    var(--hqProperty2a),
+    0 0 14px rgba(255, 190, 70, 0.95),
+    0 0 40px rgba(255, 160, 40, 0.5),
+    inset 0 0 14px rgba(120, 215, 255, 0.6) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   2d. 按钮效果
+   ---------------------------------------------------------------------------
+   刻意「不」给 .tabButton 加常驻流光：标签按钮是导航，一屏好几个，
+   常驻斜向流光会一直抢注意力（实测很吵）。导航只要悬停反馈就够了。
+   流光只留给升级 / 可购买这类「主体内容」元素（见 3. 那一节）。
+   ------------------------------------------------------------------------ */
+
+body.ds-glow .tabButton {
+  position: relative;
+}
+
+/* 悬停：一圈辉光 + 轻微提亮，静态阴影（只触发一次，不是每帧动画） */
+body.ds-glow .tabButton:hover,
+body.ds-glow .longUpg.can:hover,
+body.ds-glow .reset:hover {
+  box-shadow:
+    var(--hqProperty2a),
+    0 0 18px color-mix(in srgb, var(--points) 70%, transparent),
+    0 0 44px color-mix(in srgb, var(--color) 45%, transparent);
+  filter: brightness(1.12);
+}
+
+body.ds-glow button.can:active,
+body.ds-glow .longUpg.can:active,
+body.ds-glow .tabButton:active {
+  filter: brightness(1.25);
+}
+
+/* ---------------------------------------------------------------------------
+   2e. 闲置按钮的「偶发闪光」
+   ---------------------------------------------------------------------------
+   满屏上百个按钮一起脉动会非常吵，所以做成「大部分时间安静、
+   每隔一阵掠过一道光」。逐元素错开相位（JS 写 inline animation-delay），
+   看起来像有光在界面上游走，而不是集体闪烁。
+
+   伪元素默认 opacity: 0，只有动画运行期间才可见，
+   这样静止期几乎不产生绘制开销。
+   ------------------------------------------------------------------------ */
+
+/* 闲置闪光的载体：固定用 ::after，只挂在「闲置」元素上。
+   ::before 留给「已获得 / 满级」的呼吸辉光 —— 两者按状态类互斥，不会同时生效。
+   冲击波不在这里——它由 canvas 绘制（见 effects.js 的 spawnShockwave），
+   所以不需要再抢一个伪元素。
+
+   注意排除条件只用「状态类」：.bought/.done（已获得）、.notify/.resetNotify
+   （已有状态高亮）、.ds-unlocked（正在播解锁闪光）。
+   **不要排除 .can** —— 那只是「可点击」，绝大多数按钮都是 .can，
+   一旦排除就几乎全被滤掉，闪光等于没有。
+
+   范围刻意收窄：只给「升级 / 可购买」这类主体内容闪，
+   不再铺到成就、方块、点击物上——一屏到处都在闪会很吵。
+   关闭开关 body.ds-no-shimmer 直接写进选择器里，而不是另外写一条抑制规则：
+   这里的 :not() 链特异性很高（0,5,1），普通抑制规则（0,2,1）根本盖不住。 */
+body.ds-glow:not(.ds-no-shimmer) .upg:not(.bought):not(.notify):not(.resetNotify):not(.ds-unlocked)::after,
+body.ds-glow:not(.ds-no-shimmer) .buyable:not(.bought):not(.notify):not(.resetNotify):not(.ds-unlocked)::after,
+body.ds-glow:not(.ds-no-shimmer) .tile:not(.bought):not(.notify):not(.resetNotify):not(.ds-unlocked)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, var(--points) 24%, transparent) 45%,
+    color-mix(in srgb, var(--points) 38%, transparent) 50%,
+    color-mix(in srgb, var(--points) 24%, transparent) 55%,
+    transparent 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  opacity: 0;
+  animation: ds-idle-shimmer var(--ds-idle-speed) ease-in-out infinite;
+  /* 相位由 JS 按元素序号写在这个自定义属性上，让光「游走」而不是集体闪。
+     必须写在 animation 简写之后，否则简写会把 delay 重置掉。 */
+  animation-delay: var(--ds-idle-delay, 0s);
+}
+
+/* 大部分时间是静止的，只在一小段内掠过——避免满屏按钮一起脉动 */
+@keyframes ds-idle-shimmer {
+  0% {
+    background-position: 0% 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  38% {
+    opacity: 0.6;
+  }
+  56% {
+    background-position: 100% 0;
+    opacity: 0;
+  }
+  100% {
+    background-position: 100% 0;
+    opacity: 0;
+  }
+}
+
+/* 关掉闲置闪光时，把伪元素彻底收掉（对照台开关 /
+   deepSpaceEffects.set("idleShimmer", false)）。
+   主体的闪光规则已经用 :not(.ds-no-shimmer) 排除，这条只是兜底。 */
+body.ds-no-shimmer .upg::after,
+body.ds-no-shimmer .buyable::after,
+body.ds-no-shimmer .tile::after {
+  content: none;
+}
+
+/* ---------------------------------------------------------------------------
+   注意：这里「不要」给子元素加 position: relative
+   ---------------------------------------------------------------------------
+   曾经写过 `body.ds-glow .can > * { position: relative; z-index: 2 }`，
+   本意是让文字盖在光晕之上。但树节点内部除了 <span class="nodeLabel">，
+   还有一个 <div class="tooltip">（游戏用 absolute 把它吊在节点上方）。
+   那条规则把 tooltip 也改成了 relative，它于是掉进正常文档流，
+   把 nodeLabel 顶高了 11px —— 表现出「层级图标错位」。
+
+   正确做法：光晕/冲击波伪元素自己用 z-index: 0 待在「背景之上、内容之下」，
+   完全不需要动子元素。实测 nodeLabel 偏移为 0。 */
+
+/* ---------------------------------------------------------------------------
+   2f. 点击水波纹
+   ---------------------------------------------------------------------------
+   挂在 ::before 上（和闲置闪光共用，但两者不同时发生：闲置闪光只在真的闲置时
+   才挂规则，水波纹是点击时临时加 .ds-ripple）。
+   原点用 CSS 变量 --ds-rip-x / --ds-rip-y，由 JS 按光标落点写入，
+   所以波纹是从「你点的那个点」扩散，而不是永远从中心。
+   只用 scale + opacity：不碰 box-shadow，也不改几何尺寸。
+   ------------------------------------------------------------------------ */
+@keyframes ds-ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+body.ds-glow .ds-ripple::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--points) 55%, transparent) 0%,
+    color-mix(in srgb, var(--points) 25%, transparent) 45%,
+    transparent 70%
+  );
+  transform-origin: var(--ds-rip-x, 50%) var(--ds-rip-y, 50%);
+  animation: ds-ripple 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ---------------------------------------------------------------------------
+   2g. 闲置 · 描边行走
+   ---------------------------------------------------------------------------
+   只给「低频按钮」（导航标签、树节点 —— 由 JS 加 .ds-lowfreq 标记）。
+   高频的升级格子若也加，一屏上百条旋转光带会非常花。
+
+   做法：一圈 conic-gradient 当边框，再用 mask 抠掉中间只留约 3px 的环，
+   然后整圈旋转 —— 视觉上就是「一道光沿着边框跑」。
+   只动 transform: rotate()，交给合成器。
+   ------------------------------------------------------------------------ */
+@keyframes ds-trace-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 描边行走：一道光沿着边框跑。
+   ---------------------------------------------------------------------------
+   **性能重写**：原来是「conic-gradient + radial-gradient mask + rotate」，
+   这是合成器最贵的三件套组合（渐变光栅化 + 蒙版混合 + 每帧旋转）。
+   实测单这一项就吃掉约 8fps（fx=all 24.9 → 关掉后 33.0）。
+
+   改成「滑动高光」：一条固定角度的线性渐变，只动 background-position。
+   背景位置动画是纯粹的绘制偏移，不涉及蒙版混合与旋转，
+   是本项目里验证过最便宜的手法（升级按钮的斜向流光就是这套）。
+   观感上依然是「一道光沿着按钮边缘跑」，肉眼差别很小。 */
+@keyframes ds-trace-slide {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+body.ds-glow:not(.ds-no-shimmer) .ds-lowfreq::after {
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 38%,
+    color-mix(in srgb, var(--points) 80%, transparent) 47%,
+    color-mix(in srgb, var(--color) 85%, transparent) 52%,
+    transparent 62%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: ds-trace-slide var(--ds-trace-speed) linear infinite !important;
+}
+
+/* 光带之上要能看到文字 */
+body.ds-glow .ds-lowfreq .nodeLabel,
+body.ds-glow .ds-lowfreq > span {
+  position: relative;
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------------------------
+   2i. buyable（可购买/升级型按钮）专属特效
+   ---------------------------------------------------------------------------
+   buyable 与 upgrade 的本质区别：它是「有等级、可反复购买」的。
+   所以特效不走升级的「一次性获得」那套，而是：
+
+     · 每次买到 → 数字放大闪一下（.ds-lvlup）
+     · 买到上限 → 金色旋转光芒 + 常驻金光（它此时带 .bought）
+
+   动画依然只用 scale / opacity / rotate，不碰 box-shadow。
+   ------------------------------------------------------------------------ */
+
+/* 升级脉冲：亮一下 + 弹一下，节奏比升级闪光更快（会连续触发） */
+@keyframes ds-lvlup {
+  0% {
+    scale: 1;
+    opacity: 1;
+  }
+  28% {
+    scale: 1.13;
+    opacity: 0.72;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+body.ds-glow .buyable.ds-lvlup {
+  animation: ds-lvlup 0.32s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* 满级：一层缓慢自转的金色光芒，绕着 buyable 转 */
+@keyframes ds-maxed-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+body.ds-glow .buyable.bought::after {
+  inset: -3px;
+  border-radius: inherit;
+  background-image: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 214, 130, 0.85) 40deg,
+    transparent 90deg,
+    transparent 180deg,
+    rgba(255, 236, 180, 0.7) 220deg,
+    transparent 270deg,
+    transparent 360deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 4px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 4px),
+    #000 calc(100% - 4px)
+  );
+  opacity: 0.9;
+  box-shadow: none;
+  animation: ds-maxed-spin 6s linear infinite !important;
+}
+
+/* 满级瞬间的一次强调（由 JS 加 .ds-maxed，播完即摘） */
+@keyframes ds-maxed-pop {
+  0% {
+    scale: 1;
+  }
+  30% {
+    scale: 1.16;
+  }
+  60% {
+    scale: 1.04;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+body.ds-glow .buyable.ds-maxed {
+  animation: ds-maxed-pop 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 9;
+}
+
+/* 满级 buyable 的静态金光由通用的「已获得常驻辉光」负责（它带 .bought），
+   这里只额外压一层暖色，让它与普通升级的绿/白辉光区分开。 */
+body.ds-glow .buyable.bought {
+  color: #2a1f08;
+}
+
+/* 注意：这里「不要」写 `body.ds-glow .buyable > span { position: relative }`。
+   buyable 里的 tooltip 就是 <span class="tooltip">，那样会把它的 absolute
+   定位改坏（和树节点 nodeLabel 被顶高 11px 是同一个坑）。
+   而且并不需要：buyable 本身已是 position: relative，光效只在边缘绘制。 */
+
+/* ---------------------------------------------------------------------------
+   2j. 已获得 / 满级的闲置特效（不用流光）
+   ---------------------------------------------------------------------------
+   刻意不做「扫过的光」——用户明确说过不要流光，也不需要额外的星点。
+   这里只用一层「原地」效果：缓慢呼吸的柔和辉光（只动 opacity，不移动、不扫过）。
+
+   呼吸放在 ::before，与闲置闪光（::after）按状态类互斥：
+   已获得的元素不会命中闲置闪光的选择器，所以两者不会打架。
+   ------------------------------------------------------------------------ */
+@keyframes ds-owned-breathe {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+body.ds-glow .upg.bought::before,
+body.ds-glow .achievement.done::before,
+body.ds-glow .tile.bought::before,
+body.ds-glow .buyable.bought::before,
+body.ds-glow .milestoneDone::before,
+body.ds-glow .challenge.done::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--points) 70%, transparent),
+    0 0 46px color-mix(in srgb, var(--color) 45%, transparent);
+  animation: ds-owned-breathe var(--ds-owned-speed) ease-in-out infinite alternate;
+}
+
+/* 满级 buyable 的呼吸更慢一点，与普通已获得区分开（它另有金色旋转环） */
+body.ds-glow .buyable.bought::before {
+  animation-duration: calc(var(--ds-owned-speed) * 1.5);
+}
+
+/* 静止偏好下不要呼吸 */
+@media (prefers-reduced-motion: reduce) {
+  body.ds-glow .upg.bought::before,
+  body.ds-glow .achievement.done::before,
+  body.ds-glow .tile.bought::before,
+  body.ds-glow .buyable.bought::before,
+  body.ds-glow .milestoneDone::before,
+  body.ds-glow .challenge.done::before {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   2k. 给纯色按钮加质感
+   ---------------------------------------------------------------------------
+   游戏把可购买元素画成「纯色平面」（background-color 由主题 / 层级色给定），
+   看着很扁。这里叠加两层渐变做立体感：
+
+     · 上亮下暗的纵向渐变 —— 像被顶光打到的实体表面
+     · 左上一抹高光       —— 玻璃 / 釉面质感
+     · 内侧一圈细亮边     —— 把按钮「从背景里提起来」
+
+   关键：用 background-blend-mode 与「已有背景色」混合，
+   而不是直接覆盖 background-image —— 这样游戏设置的主题色仍然生效，
+   换主题时质感跟着变。
+
+   注意：不加 translateY —— 那会让布局抖动，而且会和 hover 的 scale 打架。
+   ------------------------------------------------------------------------ */
+body.ds-glow .can.upg,
+body.ds-glow .can.buyable,
+body.ds-glow .can.tile,
+body.ds-glow .can.smallUpg,
+body.ds-glow .can.longUpg,
+body.ds-glow .can.opt,
+body.ds-glow .can.reset,
+body.ds-glow .tabButton {
+  background-image:
+    /* ① 上亮下暗：对比拉大，立体感更明确 */
+    linear-gradient(
+      158deg,
+      rgba(255, 255, 255, 0.34) 0%,
+      rgba(255, 255, 255, 0.1) 38%,
+      rgba(0, 0, 0, 0.1) 62%,
+      rgba(0, 0, 0, 0.3) 100%
+    ),
+    /* ② 左上釉面高光：更亮更集中 */
+    radial-gradient(
+      105% 72% at 26% 8%,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.14) 34%,
+      rgba(255, 255, 255, 0) 66%
+    ),
+    /* ③ 右下反光：补一层环境反射，避免下半死黑 */
+    radial-gradient(
+      90% 70% at 82% 104%,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    /* ④ 占位层：让 normal 混合兜住前三层，不改变底色 */
+    linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
+  background-blend-mode: overlay, soft-light, soft-light, normal;
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    /* 外投影：加大半径与浓度，把按钮从背景里托起来 */
+    0 5px 18px rgba(0, 0, 0, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    /* 顶部内侧亮边：更像有厚度的实体 */
+    0 2px 0 rgba(255, 255, 255, 0.5) inset,
+    0 0 14px rgba(255, 255, 255, 0.16) inset,
+    /* 底部内侧暗边：配合顶光形成厚度感 */
+    0 -3px 8px rgba(0, 0, 0, 0.3) inset;
+}
+
+/* 锁定 / 已获得的按钮不参与质感提升，保持扁平以示区分 */
+body.ds-glow .locked.upg,
+body.ds-glow .locked.buyable,
+body.ds-glow .bought.upg,
+body.ds-glow .bought.buyable,
+body.ds-glow .bought.tile {
+  background-blend-mode: normal;
+}
+
+/* 悬停：整块光泽再提亮一档 */
+body.ds-glow .can.upg:hover,
+body.ds-glow .can.buyable:hover,
+body.ds-glow .can.tile:hover,
+body.ds-glow .can.smallUpg:hover,
+body.ds-glow .can.reset:hover,
+body.ds-glow .tabButton:hover {
+  background-image:
+    linear-gradient(
+      158deg,
+      rgba(255, 255, 255, 0.44) 0%,
+      rgba(255, 255, 255, 0.14) 38%,
+      rgba(0, 0, 0, 0.08) 62%,
+      rgba(0, 0, 0, 0.26) 100%
+    ),
+    radial-gradient(
+      105% 72% at 26% 8%,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(255, 255, 255, 0.2) 34%,
+      rgba(255, 255, 255, 0) 66%
+    ),
+    radial-gradient(
+      90% 70% at 82% 104%,
+      rgba(255, 255, 255, 0.26) 0%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
+  box-shadow:
+    0 7px 24px rgba(0, 0, 0, 0.5),
+    0 2px 5px rgba(0, 0, 0, 0.32),
+    0 2px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 18px rgba(255, 255, 255, 0.22) inset,
+    0 -3px 8px rgba(0, 0, 0, 0.26) inset;
+}
+
+/* ---------------------------------------------------------------------------
+   2l. 能量条（p 层）特效
+   ---------------------------------------------------------------------------
+   能量条由 ['bar', 'energyN'] 组件渲染：结构是
+     .overlayTextContainer.barBorder  文字层
+     .barBG.barBorder                 底槽
+     .fill                            填充部分（进度）
+   填充按钮是 clickables（id 形如 clickable-p-11）。
+
+   填充时 JS 给对应元素加 .ds-energy-pulse（一次性），
+   同时在 canvas 上以填充前沿为原点炸一把金色粒子。
+   ------------------------------------------------------------------------ */
+@keyframes ds-energy-pulse {
+  0% {
+    scale: 1;
+    opacity: 1;
+  }
+  30% {
+    scale: 1.02;
+    opacity: 0.75;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+body.ds-glow .ds-energy-pulse {
+  animation: ds-energy-pulse 0.62s cubic-bezier(0.33, 1, 0.68, 1);
+  z-index: 9;
+}
+
+/* 能量条底槽：内凹感 + 边框发光，看起来像「容器」 */
+body.ds-glow .barBG.barBorder {
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.14),
+    0 0 10px color-mix(in srgb, var(--color) 30%, transparent);
+}
+
+/* 填充部分：顶部亮边 + 外发光，且用渐变做出「液面」的感觉。
+   注意 .fill 原本已有 ds-energy-flow 的流光动画，这里只加静态层次，不动画。 */
+body.ds-glow .fill {
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--points) 60%, transparent),
+    inset 0 2px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 填充按钮：整块暖色处理，提示「这是能量条专用按钮」 */
+body.ds-glow .ds-energy-btn {
+  background-blend-mode: normal;
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.4),
+    inset 0 2px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.24),
+    0 0 14px rgba(255, 210, 90, 0.22);
+}
+
+body.ds-glow .ds-energy-btn:hover {
+  box-shadow:
+    0 5px 18px rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.44),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.2),
+    0 0 22px rgba(255, 210, 90, 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+   2m. 里程碑界面
+   ---------------------------------------------------------------------------
+   里程碑是 <td class="milestone"> / <td class="milestoneDone">，没有 id。
+   达成的那些给「金色质感」：左侧亮条 + 内高光 + 呼吸金边（只动 opacity），
+   与未达成的偏灰状态形成明确对比。
+
+   注意：不动画 box-shadow（那是本项目最贵的坑），
+   呼吸走 ::before 的 opacity。
+   ------------------------------------------------------------------------ */
+body.ds-glow td.milestone,
+body.ds-glow td.milestoneDone {
+  position: relative;
+  border-radius: 6px;
+}
+
+/* 未达成：内凹的「空槽」感，像还没点亮的槽位 */
+body.ds-glow td.milestone {
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 已达成：实心凸起的「已点亮」感 */
+body.ds-glow td.milestoneDone {
+  border-color: rgba(255, 228, 150, 0.6);
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.36),
+    inset 0 2px 0 rgba(255, 255, 255, 0.36),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes ds-ms-breathe {
+  from {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+body.ds-glow td.milestoneDone::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 6px 0 0 6px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 236, 170, 0.95),
+    rgba(255, 200, 80, 0.75)
+  );
+  box-shadow: 0 0 12px rgba(255, 214, 120, 0.85);
+  animation: ds-ms-breathe var(--ds-ms-speed) ease-in-out infinite alternate;
+}
+
+/* 已达成的一圈柔光（与常驻辉光叠加，突出「这一格完成了」） */
+body.ds-glow td.milestoneDone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    0 0 16px rgba(255, 218, 130, 0.55),
+    inset 0 0 18px rgba(255, 224, 150, 0.35);
+  animation: ds-ms-breathe calc(var(--ds-ms-speed) * 1.3) ease-in-out infinite
+    alternate;
+}
+
+/* 设置页的按钮表格：窄视口下改成竖向堆叠。
+   ---------------------------------------------------------------------------
+   原来是固定 3 列的 <table>，窗口窄的时候整表会横向溢出，
+   新增的那行按钮就被推到可视区外面 —— 看起来就像「设置里没有这个开关」。
+   这里在窄屏下把 table/tr/td 都改成块级，按钮自然竖向排开，一个都不会被裁。
+
+   注意：这条是布局修补，不是特效，所以**不加** body.ds-glow 前缀
+   （特效关掉了也得能看见设置项）。属于 effects.css 里的例外，已在
+   AGENTS.md 的「作用域」一节记录。 */
+@media (max-width: 900px) {
+  .options-tab table,
+  .tab .options-tab table,
+  table:has(> tbody > tr > td > button.opt) {
+    display: block;
+    width: 100%;
+  }
+  table:has(> tbody > tr > td > button.opt) > tbody,
+  table:has(> tbody > tr > td > button.opt) tr {
+    display: block;
+  }
+  table:has(> tbody > tr > td > button.opt) td {
+    display: block;
+    width: 100%;
+  }
+  table:has(> tbody > tr > td > button.opt) td:empty {
+    display: none;
+  }
+  button.opt {
+    width: 100%;
+    margin: 2px 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   2n. 计时条（独立于按钮）：冷却 + 持续时间
+   ---------------------------------------------------------------------------
+   这一版是**重做**的。以前把进度带画在按钮的 ::before 伪元素上，一路踩坑：
+   ::after 被「闲置闪光」的高特异性选择器占着、::before 又有两条规则在动画
+   opacity、还得靠 !important 跟斜向流光抢 animation。最要命的是按钮容器有
+   overflow:hidden、带子只有几个像素，用户连续三次反馈「看不到」。
+
+   现在改成**独立的 DOM 元素**，由特效层创建、挂在自己的固定图层里：
+     · 不在按钮内部 → 不受 overflow / border-radius / 背景色影响
+     · 不占伪元素 → 与闲置闪光、已获得辉光、斜向流光全都不冲突
+     · 不需要 !important → 与任何既有选择器都没有特异性关系
+     · 位置由 JS 按按钮的实际矩形摆放 → 看起来仍是「这个按钮的计时条」
+
+   图层 `#deepSpaceCooldown` 用 position:fixed + z-index 5：
+   在能量条（2/3/6）与 tooltip（7）之下，不遮挡任何文字与交互。
+   它自身 pointer-events:none，绝不抢点击。
+
+   **底轨必须半透明 + 带描边，不能用纯黑**（踩过）：
+   条子悬在按钮底边，只有一半压在按钮上、另一半直接落在深色页面上。
+   纯黑底轨在深色背景里等于隐形，用户只看到按钮内那一小段亮色，
+   反馈是「只能看到一条竖线」。改成半透明浅色 + 亮描边后，
+   在按钮上和页面背景上都清晰可辨。
+   ------------------------------------------------------------------------ */
+#deepSpaceCooldown {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ds-cdbar {
+  position: fixed;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  pointer-events: none;
+  /* 半透明浅色底轨 + 浅浅的高光描边：浅色按钮与深色页面背景上都看得见 */
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* 亮色进度：宽度由 JS 写成 --ds-cd-pct（百分比字符串）。
+   这一层是绝对定位、无子元素的独立小块，改宽度不会引起页面重排。 */
+.ds-cdbar > i {
+  display: block;
+  height: 100%;
+  width: var(--ds-cd-pct, 0%);
+  transition: width 0.15s linear;
+}
+
+/* 冷却型（凝聚希望）：冷绿 = 还不能按 */
+.ds-cdbar-cd > i {
+  background: linear-gradient(90deg, #35c98d, #8cf0bd 55%, #ffffff);
+  box-shadow: 0 0 9px rgba(120, 255, 190, 0.8);
+}
+
+/* 持续时间型（希望共振 / 共鸣 / 永续）：暖金 = 增益还在生效 */
+.ds-cdbar-buff > i {
+  background: linear-gradient(90deg, #e8a12a, #ffd76a 55%, #fff6d8);
+  box-shadow: 0 0 9px rgba(255, 210, 110, 0.8);
+}
+
+/* 计时结束瞬间：整条亮一下并扩散淡出 */
+@keyframes ds-cdbar-ready {
+  0% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  25% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.06);
+  }
+}
+
+.ds-cdbar.ds-cdbar-ready {
+  animation: ds-cdbar-ready 0.6s ease-out forwards;
+}
+
+/* ---------------------------------------------------------------------------
+   2o. 成就页面
+   ---------------------------------------------------------------------------
+   成就的结构（实测）：<div class="A achievement tooltipBox bought|locked">
+     · 已获得 → 带 .bought      · 未获得 → 带 .locked
+
+   它本来就已经有：未获得的闲置闪光、已获得的呼吸辉光（走通用 .bought 规则）。
+   所以这里不该「再加一层光」（会糊成一团），而是给它**专属质感**，
+   与普通升级区分开：
+
+     · 未获得：内凹的「空槽」感，像还没点亮的徽章
+     · 已获得：暖金描边 + 内高光 + 外发光，像块小奖牌
+
+   再加一条金色细边强化「收集品」的感觉。注意底部金边走 ::before，
+   因为 ::after 已经被呼吸辉光占用了。
+   ------------------------------------------------------------------------ */
+body.ds-glow .achievement {
+  position: relative;
+  border-radius: 6px;
+  transition:
+    filter 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.2s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+/* 未获得：像还没点亮的空槽 */
+body.ds-glow .achievement.locked {
+  box-shadow:
+    inset 0 3px 9px rgba(0, 0, 0, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 已获得：暖金小奖牌 */
+body.ds-glow .achievement.bought {
+  border-color: rgba(255, 232, 170, 0.62);
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.34),
+    0 0 16px rgba(255, 216, 130, 0.34),
+    inset 0 2px 0 rgba(255, 255, 255, 0.36),
+    inset 0 -3px 7px rgba(0, 0, 0, 0.24);
+}
+
+/* 已获得的底部金边（走 ::before，::after 留给呼吸辉光） */
+body.ds-glow .achievement.bought::before {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 226, 150, 0.9),
+    transparent
+  );
+  /* 复用「已获得呼吸」的节奏，让金边也轻轻起伏 */
+  animation: ds-owned-breathe var(--ds-owned-speed) ease-in-out infinite
+    alternate;
+}
+
+/* 成就文字保持在光效之上：只动 .achievement 里的 h3，
+   不要用 > span 之类的通配 —— tooltip 也是 span，会被改坏定位（踩过）。 */
+body.ds-glow .achievement h3 {
+  position: relative;
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------------------------
+   2p. 数值的发光质感
+   ---------------------------------------------------------------------------
+   JS 按量级把数字打上 data-ds-num="0..6"，这里分档给发光与变色。
+
+   档位 0 只给静态 text-shadow；档位 ≥ 1（1e15 以上）再叠加变色动画。
+   小数值不加动画，避免满屏都在动。
+
+   注意：JS 侧只在**档位变化**时写 data-ds-num，这是动画不被打断的前提
+   （见下方 ds-num-hue 的说明）。
+
+   档位越高（数量级越大）光晕越亮、越偏暖，像「读数在发热」。
+   注意 text-shadow 只写 2 层以内：它落在文字上，多一层就多一次绘制。
+   ------------------------------------------------------------------------ */
+body.ds-glow [data-ds-num] {
+  transition: text-shadow 0.25s ease;
+}
+
+/* 变色呼吸：数值本体在**白色 → 冰蓝 → 淡紫 → 暖金**之间缓慢游走，光晕同色跟随。
+   ---------------------------------------------------------------------------
+   关键技术点（**实测确认，纠正了我之前笔记里的判断**）：
+   游戏每 50ms 用新数值重写 textContent，但只要 JS 侧**不重新设置 animation 属性**，
+   CSS 动画就不会被打断 —— 文本更新不会重启动画。
+   前提是 numFx 只在「档位变化」时写 data-ds-num（已经是这样）。
+   实测：连续采样同一个 span，颜色从青 → 蓝 → 紫 → 粉 → 金持续游走，
+   而它的文本一直没变过。
+
+   **为什么要连 color 一起动画**（试了三轮才定）：
+   数字本身是白色的，光晕只出现在字形外侧 —— 只动 text-shadow 的话，
+   半径 6→20px、alpha 0.5→0.92 都试过，屏幕上依然「几乎看不出」。
+   改成**连文字颜色一起游走**之后对比度才够。颜色保持浅色系（不是饱和色），
+   白 → 冰蓝 → 淡紫 → 暖金，既醒目又不影响可读性。
+
+   只动 color 与 text-shadow.color：两者都不触发重排，只重绘字形。
+   ------------------------------------------------------------------------ */
+@keyframes ds-num-hue {
+  0% {
+    color: #ffffff;
+    text-shadow: 0 0 12px rgba(80, 210, 255, 0.8);
+  }
+  25% {
+    color: #bfe4ff;
+    text-shadow: 0 0 15px rgba(110, 175, 255, 0.9);
+  }
+  50% {
+    color: #dcc9ff;
+    text-shadow: 0 0 15px rgba(180, 130, 255, 0.9);
+  }
+  75% {
+    color: #ffe6b8;
+    text-shadow: 0 0 14px rgba(255, 200, 110, 0.88);
+  }
+  100% {
+    color: #ffffff;
+    text-shadow: 0 0 12px rgba(80, 210, 255, 0.8);
+  }
+}
+
+/* 只有「值得注意」的数值（档位 ≥ 1，即 1e15 以上）才持续变色。
+   小数值保持静态发光，避免满屏都在闪。 */
+body.ds-glow [data-ds-num="1"],
+body.ds-glow [data-ds-num="2"],
+body.ds-glow [data-ds-num="3"] {
+  animation: ds-num-hue 5s ease-in-out infinite;
+}
+
+body.ds-glow [data-ds-num="4"],
+body.ds-glow [data-ds-num="5"],
+body.ds-glow [data-ds-num="6"] {
+  /* 更大的数：变色更快，读起来像「在发热」 */
+  animation: ds-num-hue 3.5s ease-in-out infinite;
+}
+
+/* #points（主资源读数）上原本已经有 ds-points-glow（opacity + transform 呼吸）。
+   同一个元素只能有一个 animation 声明，直接写会**把那个呼吸顶掉**，
+   所以这里显式把两个动画并列写出来，两个都保留。 */
+body.ds-glow [data-ds-num]#points {
+  animation:
+    ds-points-glow 3.4s ease-in-out infinite alternate,
+    ds-num-hue 3.5s ease-in-out infinite;
+}
+
+/* 错开相位：同一屏里几个数值不要同时变色（用 nth-of-type 最简单，
+   不依赖 JS 算相位）。 */
+body.ds-glow [data-ds-num]:nth-of-type(2n) {
+  animation-delay: -1.5s;
+}
+body.ds-glow [data-ds-num]:nth-of-type(3n) {
+  animation-delay: -3s;
+}
+
+body.ds-glow [data-ds-num="0"] {
+  text-shadow: 0 0 4px rgba(190, 225, 255, 0.28);
+}
+
+body.ds-glow [data-ds-num="1"] {
+  text-shadow: 0 0 5px rgba(170, 220, 255, 0.36);
+}
+
+body.ds-glow [data-ds-num="2"] {
+  text-shadow: 0 0 7px rgba(150, 215, 255, 0.46);
+}
+
+body.ds-glow [data-ds-num="3"] {
+  text-shadow: 0 0 9px rgba(150, 225, 255, 0.56);
+}
+
+body.ds-glow [data-ds-num="4"] {
+  text-shadow:
+    0 0 10px rgba(150, 240, 255, 0.6),
+    0 0 20px rgba(110, 200, 255, 0.3);
+}
+
+body.ds-glow [data-ds-num="5"] {
+  text-shadow:
+    0 0 12px rgba(175, 250, 255, 0.68),
+    0 0 24px rgba(120, 210, 255, 0.36);
+}
+
+body.ds-glow [data-ds-num="6"] {
+  text-shadow:
+    0 0 13px rgba(255, 235, 170, 0.7),
+    0 0 26px rgba(255, 200, 110, 0.38);
+}
+
+/* ---------------------------------------------------------------------------
+   3. 可购买元素的斜向流光扫过
+   ------------------------------------------------------------------------ */
+
+@keyframes ds-sheen {
+  0% {
+    background-position: -160% 0;
+  }
+  100% {
+    background-position: 260% 0;
+  }
+}
+
+body.ds-glow .upg.can,
+body.ds-glow .buyable.can {
+  position: relative;
+  background-image: linear-gradient(
+    115deg,
+    transparent 38%,
+    color-mix(in srgb, var(--points) 55%, transparent) 50%,
+    transparent 62%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation: ds-sheen var(--ds-sheen-speed) linear infinite;
+  will-change: background-position;
+}
+
+body.ds-glow .upg.can:nth-of-type(2n),
+body.ds-glow .buyable.can:nth-of-type(2n) {
+  animation-delay: -1.1s;
+}
+body.ds-glow .upg.can:nth-of-type(3n),
+body.ds-glow .buyable.can:nth-of-type(3n) {
+  animation-delay: -2.2s;
+}
+
+/* ---------------------------------------------------------------------------
+   4. 进度条 / 分隔线的能量流动
+   ------------------------------------------------------------------------ */
+
+@keyframes ds-energy-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* 进度条底槽：内凹 + 边缘发光 */
+body.ds-glow .barBorder {
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--color) 40%, transparent),
+    inset 0 0 10px color-mix(in srgb, var(--color) 18%, transparent);
+}
+
+/* 填充部分：只加「高光 + 外发光」，**绝对不要碰 background-color / background-image**。
+   ---------------------------------------------------------------------------
+   踩过的坑：曾经给通用的 `.fill` 加了一条 background-image 渐变 + 流光动画，
+   结果把每个进度条自己的填充色盖掉了 —— 例如 p 层能量条 1 本来是
+   游戏内联设的 #632525 深红，被我的渐变冲成一片发白。
+   `.fill` 是所有 bar 组件共用的类，各条 bar 的颜色由游戏内联 fillStyle 决定，
+   所以这里只能做「叠加光效」，不能改颜色。
+   ------------------------------------------------------------------------ */
+body.ds-glow .fill {
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.28);
+}
+
+/* 能量条（p 层）专属：底色是各条自己的颜色（红/棕/黄/绿/青/蓝/紫/灰），
+   只在其上叠一层细高光与柔和外发光，让它看起来是「有液面的容器」。 */
+body.ds-glow .ds-energy-bar-fill {
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--points) 45%, transparent),
+    inset 0 2px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* 持续脉冲：填充部分一直在「呼吸」，表示它持续在吞吐能量。
+   ---------------------------------------------------------------------------
+   刻意**不**动画 box-shadow —— 那是本项目实测最贵的坑之一。
+   改成在 ::after 上放一层固定渐变，只动画它的 opacity（纯合成器操作）。
+   伪元素分工：::before 前身已用于别处，所以这里脉冲走 ::after、
+   「能量锋面」走 ::before，两者不冲突。
+   ------------------------------------------------------------------------ */
+@keyframes ds-bar-pulse {
+  from {
+    opacity: 0.15;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+
+body.ds-glow .ds-energy-bar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  /* 亮度略微提高以补偿去掉 mix-blend-mode 后的观感：
+     原来是白色渐变 + `mix-blend-mode: screen`，而 screen 混合白色本身
+     就等于「提亮」，所以直接换成等效的不透明白色渐变。
+     **不要改回 mix-blend-mode** —— 它强制合成器每帧读取背景再混合，
+     而这条伪元素上还挂着持续脉冲动画，7 条 bar 同时混合属于已知的合成杀手。
+     纯色渐变 + opacity 动画是等效且廉价的表达。 */
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.46) 60%,
+    rgba(255, 255, 255, 0.9) 100%
+  );
+  animation: ds-bar-pulse var(--ds-bar-speed) ease-in-out infinite alternate;
+}
+
+/* 填充前沿的一道「能量锋面」：贴在最右端，与脉冲反相呼应 */
+body.ds-glow .ds-energy-bar-fill::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 3px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.3)
+  );
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
+  animation: ds-bar-pulse calc(var(--ds-bar-speed) * 0.62) ease-in-out infinite
+    alternate;
+}
+
+body.ds-glow .vl,
+body.ds-glow .hl {
+  background-image: linear-gradient(
+    180deg,
+    transparent,
+    var(--color) 30%,
+    var(--points) 50%,
+    var(--color) 70%,
+    transparent
+  );
+  background-size: 100% 200%;
+  animation: ds-energy-flow var(--ds-flow-speed) linear infinite;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color) 55%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   5. 文字与标题发光
+   ------------------------------------------------------------------------ */
+
+body.ds-glow h1,
+body.ds-glow h2,
+body.ds-glow h3 {
+  text-shadow:
+    0 0 8px color-mix(in srgb, var(--color) 45%, transparent),
+    0 0 22px color-mix(in srgb, var(--color) 18%, transparent);
+}
+
+/* 数值与版本号：静态文字辉光 + 合成器驱动的缩放呼吸。
+   原本这里动画 text-shadow + filter，两者都会每帧触发主线程重绘文字。 */
+body.ds-glow #points,
+body.ds-glow #version {
+  text-shadow:
+    0 0 10px var(--points),
+    0 0 26px color-mix(in srgb, var(--points) 55%, transparent);
+  transform-origin: center;
+  animation: ds-points-glow var(--ds-points-speed) ease-in-out infinite alternate;
+}
+
+body.ds-glow #version {
+  animation-duration: calc(var(--ds-points-speed) * 1.6);
+}
+
+@keyframes ds-points-glow {
+  from {
+    opacity: 0.72;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
+/* 升级 / 成就的悬停说明框。
+   刻意「不」用 backdrop-filter：它每帧都要重新采样背景，是出名的性能陷阱。 */
+body.ds-glow .tooltip {
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--color) 50%, transparent),
+    0 0 40px color-mix(in srgb, var(--color) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color) 45%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   6. 弹窗 / 标签按钮 / 侧栏
+   ------------------------------------------------------------------------ */
+
+/* 成就 / 里程碑弹窗：入场从右侧滑入
+   ---------------------------------------------------------------------------
+   **fill-mode 必须是 backwards，不能用 both（踩过）。**
+   弹窗是 Vue 的 <transition-group name="fade">，淡出靠 popup.css 里
+   `.fade-leave-active { transition: opacity 0.3s }` + `.fade-leave-to { opacity: 0 }`。
+
+   而 `animation-fill-mode: both` 会**在动画结束后永久保持终态**
+   （100% 的 opacity: 1），而**动画的声明优先级高于 transition** ——
+   结果淡出的类加上了，opacity 却全程被钉在 1，弹窗到时间直接消失。
+   实测：淡出期间 opacity 一直读作 1，类是正确的 fade-leave-active/fade-leave-to。
+
+   backwards 只在动画**开始前**套用 0% 关键帧（避免入场闪一下），
+   动画结束后完全不干预，把 opacity 交还给 Vue 的过渡。 */
+@keyframes ds-popup-in {
+  0% {
+    transform: translateX(30px) scale(0.94);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(0) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+body.ds-glow .popup {
+  animation: ds-popup-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--points) 60%, transparent),
+    0 0 52px color-mix(in srgb, var(--color) 32%, transparent);
+}
+
+body.ds-glow .tabButton {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color) 28%, transparent);
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+body.ds-glow .tabButton:hover {
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--points) 70%, transparent),
+    0 0 46px color-mix(in srgb, var(--color) 40%, transparent);
+}
+
+body.ds-glow .overlayThing {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color) 55%, transparent));
+}
+
+/* ---------------------------------------------------------------------------
+   7. 滚动条
+   ------------------------------------------------------------------------ */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--background) 80%, black);
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color) 65%, transparent),
+    color-mix(in srgb, var(--points) 65%, transparent)
+  );
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color) 55%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   8. 尊重系统的「减少动态效果」设置
+   ------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body.ds-glow .can::after,
+  body.ds-glow .treeNode.can::after,
+  body.ds-glow .treeButton.can::after,
+  body.ds-glow .smallNode.can::after,
+  body.ds-glow .upg.can::after,
+  body.ds-glow .buyable.can::after,
+  body.ds-glow .tile.can::after,
+  body.ds-glow .upg.can,
+  body.ds-glow .buyable.can,
+  .fill,
+  .vl,
+  .hl,
+  #points,
+  #version,
+  .popup {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   9. 强度开关（想调整就改这里）
+   ------------------------------------------------------------------------ */
+
+:root {
+  --ds-color-aurora-a: #4dffd2; /* 极光青绿 */
+  --ds-color-aurora-b: #7a5cff; /* 极光紫罗兰 */
+  --ds-color-aurora-c: #2ad4ff; /* 极光冰蓝 */
+  --ds-star-color: #eaf6ff; /* 星点颜色 */
+
+  --ds-breathe-speed: 3.6s;
+  --ds-pulse-speed: 4.4s;
+  --ds-sheen-speed: 4.2s;
+  --ds-idle-speed: 2.6s;
+  --ds-trace-speed: 3.2s;
+  --ds-owned-speed: 3.8s;
+  --ds-ms-speed: 2.4s;
+  --ds-bar-speed: 1.5s;
+  --ds-flow-speed: 5s;
+  --ds-points-speed: 3.4s;
+}

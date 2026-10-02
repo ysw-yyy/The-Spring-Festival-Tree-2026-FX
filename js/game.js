@@ -455,6 +455,9 @@ var interval = setInterval(function () {
   if (player === undefined || tmp === undefined) return;
   if (ticking) return;
   if (tmp.gameEnded && !player.keepGoing) return;
+  // 标签页不可见时不必跑主循环：updateTemp 会遍历所有层级的大量函数，
+  // 纯属浪费（而且会一直占着 CPU）。切回来时用真实时间差补上离线收益。
+  if (document.hidden) return;
   ticking = true;
   let now = Date.now();
   let diff = (now - player.time) / 1e3;
@@ -477,6 +480,16 @@ var interval = setInterval(function () {
     resizeCanvas();
     needCanvasUpdate = false;
   }
+  // 兜底：窗口尺寸真的变了才重绘分支线。
+  // 原版是一个 500ms 的 setInterval 无条件把 needCanvasUpdate 置 true，
+  // 等于每秒 2 次「清空整张画布 + 重画所有分支线」——既浪费又会让连线看起来在闪。
+  if (
+    canvas &&
+    (canvas.width !== window.innerWidth ||
+      canvas.height !== window.innerHeight)
+  ) {
+    needCanvasUpdate = true;
+  }
   tmp.scrolled =
     document.getElementById("treeTab") &&
     document.getElementById("treeTab").scrollTop > 30;
@@ -491,6 +504,7 @@ var interval = setInterval(function () {
   ticking = false;
 }, 50);
 
-setInterval(function () {
-  needCanvasUpdate = true;
-}, 500);
+// 注意：这里原来有一个每 500ms 无条件 needCanvasUpdate = true 的定时器，
+// 会让分支线每秒被清空重画两次。改成在主循环里比对画布与窗口尺寸，
+// 只有真的变了才重绘，平时（以及移动端地址栏收放）都不再有多余开销。
+

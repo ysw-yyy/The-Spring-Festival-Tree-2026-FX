@@ -171,6 +171,13 @@ var systemComponents = {
                 <td><button class="opt" onclick="toggleOpt('forceOneTab'); needsCanvasUpdate = true">单标签模式: {{ options.forceOneTab?"永远":"自动" }}</button></td>
 				<td><button class="opt" onclick="toggleOpt('forceTooltips'); needsCanvasUpdate = true">Shift-Click to Toggle Tooltips: {{ options.forceTooltips?"ON":"OFF" }}</button></td>
 				</tr> 
+            <!-- 背景特效开关（星场 / 星云 / 流星 / 星尘 / 点击爆发）。
+                 只关背景，界面上的光效不受影响。 -->
+            <tr>
+                <td><button class="opt" onclick="toggleOpt('backgroundFx')">背景特效: {{ options.backgroundFx?"开":"关" }}</button></td>
+                <td></td>
+                <td></td>
+            </tr>
         </table>`
     },
 

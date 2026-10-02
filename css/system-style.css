@@ -1,5 +1,9 @@
 * {
-  transition-duration: 0.5s;
+  /* 原版是 transition-duration: 0.5s —— 等于给页面上「每一个元素」都挂上 0.5 秒过渡。
+     浏览器必须为所有元素维护过渡状态，DOM 一变动就要做大量过渡计算，是明显的性能负担。
+     这里关掉；需要过渡的地方各文件都自己声明了（bars.css 进度条、misc.css 的 tooltip、
+     other-tabs.css 侧栏、popup.css 弹窗），不受影响。 */
+  transition-duration: 0s;
   text-align: center;
   font-family: "Inconsolata", monospace;
   font-weight: bold;

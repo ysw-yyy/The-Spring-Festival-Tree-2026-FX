@@ -14,6 +14,9 @@ function getStartOptions() {
     forceOneTab: false,
     oldStyle: false,
     tooltipForcing: true,
+    // 背景特效（星场 / 星云 / 流星 / 星尘 / 点击爆发）总开关。
+    // 关掉后只保留 CSS 部分的界面光效，可显著省电 / 提帧。
+    backgroundFx: true,
   };
 }
 
@@ -23,6 +26,26 @@ function toggleOpt(name) {
   options[name] = !options[name];
   if (name == "hqTree") changeTreeQuality();
   if (name == "oldStyle") updateStyle();
+  if (name == "backgroundFx") applyBackgroundFx();
+  // 立刻存档：options 本来是靠周期性 autosave 落盘的，
+  // 改完设置如果马上就刷新/关页面，改动会丢（实测就是这样）。
+  if (typeof save === "function") save(true);
+}
+
+/* 背景特效开关：只切「背景」那几层（星场 / 星云 / 流星 / 星尘 / 点击爆发），
+   界面上的光效（闲置闪光、解锁反馈、能量条脉冲与粒子等）不受影响。
+   具体实现交给特效层自己的接口，游戏这边不碰它的内部状态。 */
+function applyBackgroundFx() {
+  if (typeof deepSpaceEffects === "undefined" || !deepSpaceEffects) return;
+  const on = !!options.backgroundFx;
+  deepSpaceEffects.set("drawStarsLayer", on);
+  deepSpaceEffects.set("drawNebulaLayer", on);
+  deepSpaceEffects.set("drawParticles", on);
+  deepSpaceEffects.set("cssNebula", on);
+  // 星场/粒子层不挂载时把指针也清掉（避免留一个看不见的整屏层）
+  const cv = document.getElementById("deepSpaceCanvas");
+  if (cv) cv.style.visibility = on ? "" : "hidden";
+  needCanvasUpdate = true;
 }
 var styleCooldown = 0;
 function updateStyle() {
