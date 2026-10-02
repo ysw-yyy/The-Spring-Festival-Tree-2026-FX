@@ -84,6 +84,6 @@ echo.
 echo === Done ===
 "%GIT%" log --oneline -3
 echo.
-echo repo:  https://github.com/ysw-yyy/spring-festival-tree-fx
-echo live:  https://ysw-yyy.github.io/spring-festival-tree-fx/
+echo repo:  https://github.com/ysw-yyy/The-Spring-Festival-Tree-2026-FX
+echo live:  https://ysw-yyy.github.io/The-Spring-Festival-Tree-2026-FX/
 endlocal

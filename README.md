@@ -1,9 +1,18 @@
-﻿# 2026 春节树 · 深空特效版
+# 2026 春节树 · 深空特效版
 
 《2026 春节树》是一个基于 **The-Modding-Tree** 的中文增量游戏（incremental game）。
-本仓库是**加了深空视觉特效层与性能优化**的版本，游戏玩法与原版一致，未做改动。
+本仓库是 **[QqQe308/The-Spring-Festival-Tree-2026](https://github.com/QqQe308/The-Spring-Festival-Tree-2026)
+的官方 fork**，加了深空视觉特效层与性能优化，**游戏玩法与原版一致，未做改动**。
 
-在线试玩：**`index.html`**（纯静态页面，无需构建；但依赖 CDN 加载 Vue，首次打开需要联网）
+> fork 关系是真实且完整的：本仓库保留了上游全部提交历史，
+> 我们的改动只有**一个提交**、领先上游 1 个提交、落后 0 个
+> （`ahead_by: 1, behind_by: 0`），涉及 **14 个文件**
+> （10 个新增 + 4 个性能修复）。所以可以直接向上游提 PR，diff 是干净的。
+
+在线试玩：**https://ysw-yyy.github.io/The-Spring-Festival-Tree-2026-FX/**
+
+也可以直接用仓库里的 `index.html`（纯静态页面，无需构建；
+但依赖 CDN 加载 Vue，首次打开需要联网）。
 
 ---
 
@@ -79,13 +88,15 @@ python -m http.server 8000
 
 ## 来源与许可
 
-本项目是二次创作，上游链路如下，特此致谢：
+本仓库是 [2026 春节树](https://github.com/QqQe308/The-Spring-Festival-Tree-2026)
+的 **GitHub fork**（真 fork，非重新上传），保留了上游全部提交历史。
+上游链路如下，特此致谢：
 
 | 项目 | 作者 | 说明 |
 | --- | --- | --- |
 | [The Prestige Tree](https://github.com/jacorb-tpt/The-Prestige-Tree) | Jacorb | 最初的增量游戏 |
 | [The-Modding-Tree](https://github.com/Acamaeda/The-Modding-Tree) | Acamaeda | 本游戏使用的引擎框架 |
-| [2026 春节树](https://github.com/QqQe308/The-Spring-Festival-Tree-2026) | QqQe308 | 游戏内容（层级、平衡、剧情） |
+| [2026 春节树](https://github.com/QqQe308/The-Spring-Festival-Tree-2026) | QqQe308 | 游戏内容（层级、平衡、剧情）|
 
 三者的授权均为 **MIT License**，许可证原文保留在：
 
@@ -94,6 +105,16 @@ python -m http.server 8000
 
 本仓库新增的 `js/effects.js`、`css/effects.css` 以及各项性能改动，
 同样以 MIT License 发布。
+
+### 与上游同步
+
+```bash
+git remote add upstream https://github.com/QqQe308/The-Spring-Festival-Tree-2026.git
+git fetch upstream
+git merge upstream/main      # 或 git rebase upstream/main
+```
+
+因为保留了共同祖先，上游的更新可以直接 merge/rebase，不会产生无关历史。
 
 ---
 
