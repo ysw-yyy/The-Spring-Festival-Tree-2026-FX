@@ -1297,3 +1297,29 @@ img {
   border-radius: 50%;
   background-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 72%, #ffffff);
 }
+/* I7 (corrected - I had misread the request): keep the side buttons in a ROW and move
+   the HOVER TEXT (tooltip) downwards instead. The default .tooltip sits centred ABOVE
+   the box (bottom:100%; left:50%; translateX(-50%), width 240px), so for a button at the
+   top-right corner it spills past the right edge - that is what the user saw. */
+#sideLayers,
+.sideLayers {
+  flex-flow: row nowrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
+  top: 8px;
+  right: 10px;
+}
+
+/* Hover text for the corner buttons: below the button, right-aligned, so it grows
+   leftwards and stays inside the viewport. */
+#sideLayers .tooltip,
+.sideLayers .tooltip {
+  top: 100%;
+  bottom: auto;
+  left: auto;
+  right: 0;
+  transform: none;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
