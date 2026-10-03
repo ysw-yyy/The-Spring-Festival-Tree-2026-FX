@@ -798,3 +798,13 @@ body[data-split="1"] .overlayHead {
   top: 92px;
   padding: 6px;
 }
+/* I4. 读数上下留出余量（用户："航迹应该上下空出来一点比较好"）
+   I2 里为了收掉那截空气把 padding-top 压到 2px，贴太紧了。这里改回上下对称、各 9px：
+   上面那行 `<br>` 已经在 I2 里隐藏，所以不需要额外顶开，9px 就是纯余量。 */
+.overlayHead { padding-top: 9px; padding-bottom: 9px; }
+
+/* I5. 右上三个按钮上移（用户："红框部分上面还是空出来的"）
+   之前把它放到 top: 92px 是为了躲顶部读数横条，但**横条只占左半屏**（分屏时宽度 50%），
+   右上角本来就是空的 —— 实测两者不会重叠。移回顶部把空档填掉。 */
+#sideLayers,
+.sideLayers { top: 8px; }
