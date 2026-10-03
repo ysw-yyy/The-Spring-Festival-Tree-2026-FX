@@ -780,5 +780,8 @@ function hardReset(resetOptions) {
     localStorage.removeItem(modInfo.id);
     if (resetOptions) localStorage.removeItem(modInfo.id + '_options');
   } catch (e) { /* 忽略隐私模式等异常 */ }
+  // ★ 必须同时**抑制卸载时的自动存档**：否则 reload 触发 beforeunload，
+  //   那里会把内存里还在的进度原样写回去 —— 抹掉的键立刻复活，看起来就是"硬重置没用"。
+  RT.debug.suppressUnloadSave = true;
   window.location.reload();
 }

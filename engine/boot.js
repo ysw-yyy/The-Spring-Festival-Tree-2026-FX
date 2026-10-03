@@ -126,6 +126,9 @@ RT.boot = async function () {
       RT.requestRender();
     });
     window.addEventListener('beforeunload', function () {
+      // ★ 硬重置时**绝不能**再存一次：hardReset 先抹掉 localStorage 键、再 reload，
+      //   而这里会在卸载瞬间把内存里的进度写回去 —— 表现就是"硬重置后存档还在"（用户实报）。
+      if (RT.debug && RT.debug.suppressUnloadSave) return;
       try { if (player !== undefined && options.autosave) save(); } catch (e) { /* 忽略 */ }
     });
 
