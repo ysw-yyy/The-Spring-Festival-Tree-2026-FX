@@ -143,7 +143,12 @@ RT.components = (function () {
           cells.push(h('div', { class: 'upgAlign upgCell' }, [upgrade(layer, id)]));
         }
       }
-      rowNodes.push(h('div', { class: 'upgRow upgGrid' }, cells));
+      // 把**内容层声明的列数**通过 CSS 变量交给样式：升级格子的尺寸必须按列数等分
+      // （写死像素会在分屏、面板只有 ~800px 时把 5 列挤成 4+1 换行）。
+      rowNodes.push(h('div', {
+        class: 'upgRow upgGrid',
+        style: { '--upg-cols': String(tmp[layer].upgrades.cols) },
+      }, cells));
     }
     return h('div', { class: 'upgTable' }, rowNodes.concat([h('br')]));
   }

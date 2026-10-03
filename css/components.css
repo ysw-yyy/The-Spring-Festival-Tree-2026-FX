@@ -150,22 +150,60 @@
    试过用 `flex: 1 1 0` + aspect-ratio 做自适应等分，但基础 `.upgRow` 的 flex-wrap
    与 0 基线宽组合会把它算坏（实测格子 0 宽、卡片反而撑满整行），所以用确定尺寸。
    `min-height: 0` 必须写，否则会继承 `.upg` 的 min-height:124px 把正方形顶破。
+
+   尺寸**由列数算**，不由像素写死：每格宽 = min((100% - (cols-1)·gap) / cols, --upg-size)。
+   引擎把内容层的 cols 写进行上的 `--upg-cols`。写死像素的后果实测过：
+   分屏时右栏只有 ~800px，5 × 150 + 间距 ≈ 790 刚好越界，网格被挤成 4+1 换行。
+   上限 `--upg-size` 只是"别太大"，窄面板时让位给等分。
    -------------------------------------------------------------------------- */
-.upgCell {
-  flex: 0 0 auto;
-  min-width: 0;
+/* 行必须**撑满**：格子宽度是 `calc(百分数 …)`，而百分比是逐级往上锚的 ——
+   只要中间任意一层（.upgTable / .upgGrid）是收缩宽度，格子就会按那个小宽度算
+   （实测：表 547 → 行 547 → 格子 103，而上限本来是 132）。 */
+.upgTable {
+  width: 100%;
+}
+
+.upgGrid {
+  width: 100%;
+}
+
+.upgGrid > .upgCell {
+  /* ★ `display: flex` 必须写在**这条**里（.upgGrid > .upgCell 特异性 0,2,0）：
+     本文件后面有一条 `.upgAlign { display: contents }`（当初为绕过引擎写死的 0×0 而加），
+     同特异性时后者获胜 → 格子盒子被整个移除，我在 .upgCell 上写的 width / flex
+     全部失效，卡片会退化成"直接是行的 flex item"，按整行宽度撑成 799×799（实测踩过）。
+     用更高特异性把它盖回来。 */
   display: flex;
   align-items: stretch;
+  flex: 0 0 auto;
+  /* 每格宽 = (行宽 − cols·gap) / cols —— 刻意按 **cols**（而不是 cols−1）扣间距：
+     这样天然留出一个间距的余量给亚像素舍入，否则最后一格可能被挤到下一行（5 列变 4+1）。 */
+  width: calc((100% - var(--upg-cols, 5) * var(--gap)) / var(--upg-cols, 5));
+  max-width: var(--upg-size, 138px);
+  min-width: 0;
 }
 
 .upgCell > .upg {
-  width: var(--upg-size, 150px);
-  height: var(--upg-size, 150px);
+  width: 100%;
+  height: auto;
   min-height: 0;
+  max-width: 100%;
   aspect-ratio: 1 / 1;
-  font-size: var(--fs-small, 12px);
-  line-height: 1.2;
+  /* 字号必须随格子缩小而退档：格子变小、字号不变就会溢出（实测 104px 格子溢出 27px）。
+     试过用容器查询（container-type + cqw）做连续缩放，但 `container-type: inline-size`
+     与这里的百分比 calc 宽度组合会把格子宽度算成 0（实测 10×10 卡片），故改用媒体查询退档。 */
+  font-size: 11px;
+  line-height: 1.15;
+  padding: 4px;
   overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .upgCell > .upg { font-size: 10px; }
+}
+
+@media (max-width: 820px) {
+  .upgCell > .upg { font-size: 9px; }
 }
 
 .upgBig {
