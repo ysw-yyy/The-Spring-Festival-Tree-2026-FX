@@ -161,7 +161,10 @@
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 2;
+  /* ★ 必须高于树节点：节点自身的 z-index 也是 2，而树容器在 DOM 里排在 overlay **之后**，
+     同值时按文档顺序由后者（树）获胜 —— 表现就是树节点压住顶部那条读数横条
+     （用户实拍报过两次："左上角航迹被挡住"）。整层取 3 压过树。 */
+  z-index: 3;
   width: 100%;
   height: 100%;
 }
@@ -514,15 +517,19 @@ body[data-split="1"] .overlayHead {
 #sideLayers,
 .sideLayers {
   position: absolute;
-  top: 66px;
+  /* ★ 横排（用户要求"左列三个按钮改成横置"）：原来是 column 竖着一列。
+     改成 row 之后是三个并排的小按钮，右对齐（容器 right 锚定，宽度收窄自适应）。
+     top 从 66px 下移到 100px —— 顶部那条读数横条高 89px，
+     放到它下面就不会再和"你有 X 航迹"抢地方。 */
+  top: 100px;
   right: 10px;
   z-index: var(--z-overlay);
   display: flex;
-  flex-flow: column nowrap;
+  flex-flow: row nowrap;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0;
-  max-height: calc(100vh - 80px);
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: calc(100vw - 20px);
   padding: 8px;
   margin: 0;
   background-color: rgba(6, 10, 22, 0.5);
