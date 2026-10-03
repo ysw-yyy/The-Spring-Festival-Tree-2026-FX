@@ -1535,3 +1535,29 @@ img {
   position: relative;
   z-index: 2;
 }
+/* ==========================================================================
+   I16. In-layer tree nodes: uniform squares
+   --------------------------------------------------------------------------
+   The tree things ('.upg.treeThing', used by the neutron-study tree and the
+   other in-layer trees) sized themselves from their text, so nodes came out
+   124x133 up to 124x148 - visibly uneven columns (measured). Pin them to one
+   square size instead. --tree-node is the single knob.
+   ========================================================================== */
+.upg.treeThing {
+  width: var(--tree-node, 140px) !important;
+  height: var(--tree-node, 140px) !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* 树里的单元格也按同一尺寸对齐，列宽才不会各行不同 */
+.upgAlign > .upg.treeThing {
+  margin: 0 auto;
+}

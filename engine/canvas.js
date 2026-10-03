@@ -132,31 +132,35 @@ function drawTreeBranch(num1, data, prefix) {
   const x2 = end.left + end.width / 2 + window.scrollX;
   const y2 = end.top + end.height / 2 + window.scrollY;
   const flow = branchFlowOn();
+  const ui = RT.config.ui || {};
+  // ★ 线很细：宽度不再用内容层给的 15px（那是上游的粗箭头），改用配置值。
+  const lw = ui.branchLineWidth || 1.4;
   drawnBranches++;
-  // ① 底轨：静态暗线 —— 让"连接"始终可见（也保证没动画时仍然是实线）。
-  ctx.setLineDash([]);
-  ctx.lineDashOffset = 0;
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = flow ? branchShade(color_id, -0.45) : color_id;
-  ctx.lineWidth = width;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  // ② 光段：亮色 + 柔光，沿连线推进（观感"能量在连接上流动"）。
-  if (flow) {
-    ctx.setLineDash(branchDashArr());
-    ctx.lineDashOffset = -branchPhase;
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = branchShade(color_id, 0.35);
-    ctx.strokeStyle = branchShade(color_id, 0.62);
-    ctx.lineWidth = Math.max(2, width * 0.55);
+  const line = function (w, style, dash, offset, glow, glowColor, alpha) {
+    ctx.setLineDash(dash || []);
+    ctx.lineDashOffset = offset || 0;
+    ctx.lineWidth = w;
+    ctx.strokeStyle = style;
+    ctx.shadowBlur = glow || 0;
+    ctx.shadowColor = glowColor || 'transparent';
+    ctx.globalAlpha = alpha === undefined ? 1 : alpha;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
     ctx.stroke();
+    ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
     ctx.setLineDash([]);
+  };
+  // ① 底轨：极细的静态暗线 —— "连接"始终可见，关动画时就是它。
+  line(lw, flow ? branchShade(color_id, -0.42) : color_id);
+  if (flow) {
+    // ② 光晕：宽而淡的一层，垫在光芯下面（细线想"看得出来发光"靠它）。
+    line(lw * (ui.branchHalo || 3.4), branchShade(color_id, 0.25), branchDashArr(),
+      -branchPhase, 0, null, ui.branchHaloAlpha === undefined ? 0.22 : ui.branchHaloAlpha);
+    // ③ 光芯：细亮线 + 辉光，沿连线推进。
+    line(Math.max(1, lw * 1.6), branchShade(color_id, 0.72), branchDashArr(),
+      -branchPhase, ui.branchGlow === undefined ? 11 : ui.branchGlow, branchShade(color_id, 0.45));
   }
 }
 
