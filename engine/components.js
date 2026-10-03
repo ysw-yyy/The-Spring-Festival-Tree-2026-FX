@@ -625,6 +625,14 @@ RT.components = (function () {
   // ---- 微标签 ------------------------------------------------------------
   function tabButtons(layer, data, family) {
     const buttons = [];
+    // 当前选中的子标签：用来给按钮加 active 类（样式靠它画高亮）。
+    // ★ 必须**回落到第一个标签**：新解锁的层里 player[layer].subtabs.mainTabs 可能还是
+    //   undefined（渲染器自己会回落到第一个键，所以画面正常），但 active 判断若直接比
+    //   undefined，就一个按钮都匹配不上 —— 表现是"当前标签没有任何高亮"（实测踩过）。
+    const keys = Object.keys(data);
+    let current = (player[layer] && player[layer].subtabs)
+      ? player[layer].subtabs[family || 'mainTabs'] : undefined;
+    if (current === undefined) current = keys[0];
     for (const tab in data) {
       const item = data[tab];
       if (!(item.unlocked == undefined || item.unlocked)) continue;
@@ -633,6 +641,7 @@ RT.components = (function () {
       const classes = ['tabButton'];
       if (notify) classes.push('notify');
       if (resetNotify) classes.push('resetNotify');
+      if (current === tab) classes.push('active');
       buttons.push(h('button', {
         class: classes.join(' '),
         style: [

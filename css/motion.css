@@ -1,0 +1,168 @@
+
+/* ==========================================================================
+   G. 动效层（这次新增）
+   --------------------------------------------------------------------------
+   全部只用 **transform / opacity / 颜色**，且都落在**小元素**上，遵守本仓库实测过的红线：
+     · 不用 filter / blur（整屏高斯模糊每帧重跑）；
+     · 不做 box-shadow / text-shadow 动画（每帧重画阴影）；
+     · 不给"可见范围会随状态变化"的大元素（进度条填充）加动画
+       —— clip-path + 双层 overflow 下无法提合成层，元素多大就每帧重光栅化多大；
+     · 常驻动画只加在**本来就有**的地方（.notify 已有 opacity 呼吸层）与一层背景漂移上，
+       不给几百张卡片都挂常驻动画。
+   另：所有动效在 `prefers-reduced-motion: reduce` 下一律关闭（见 base.css 末尾）。
+   ========================================================================== */
+
+@keyframes rt-tab-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes rt-card-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes rt-drift {
+  /* 位移幅度必须**小于**缩放留出的边距，否则极光层会移出视口、露出底色。
+     1600 视口：scale 1.03 时每边多出 24px，位移 ±0.6% ≈ ±9.6px，安全。 */
+  from { transform: translate3d(-0.6%, -0.4%, 0) scale(1.03); }
+  to   { transform: translate3d(0.6%, 0.4%, 0) scale(1.06); }
+}
+
+/* ---- G1. 卡片入场：切层/切子标签时由引擎重放入场（rt-tab-in 在 layout.css 里挂在右栏） ----
+   升级网格里的卡片按列错开一点点，看起来是"铺开"而不是"整片蹦出来"。
+   只给前 6 个写延迟：几十个动画同时起没有意义，还会白占合成层。 */
+.upgGrid > .upgCell > .upg {
+  animation: rt-card-in 0.22s ease-out backwards;
+}
+.upgGrid > .upgCell:nth-child(2) > .upg { animation-delay: 0.02s; }
+.upgGrid > .upgCell:nth-child(3) > .upg { animation-delay: 0.04s; }
+.upgGrid > .upgCell:nth-child(4) > .upg { animation-delay: 0.06s; }
+.upgGrid > .upgCell:nth-child(5) > .upg { animation-delay: 0.08s; }
+.upgGrid > .upgCell:nth-child(6) > .upg { animation-delay: 0.1s; }
+
+/* ---- G2. 交互反馈：悬停抬起、按下回弹（transform 不动布局，不会抖动邻居） ---- */
+.can,
+.upg,
+.buyable,
+.milestone,
+.milestoneDone,
+.achievement,
+.challenge,
+.tile,
+.opt,
+.tabButton,
+.longUpg,
+.smallUpg,
+.treeNode,
+.treeButton,
+.reset,
+.prestige-button {
+  transition: transform var(--t-fast) ease-out, border-color var(--t-fast) ease-out,
+    color var(--t-fast) ease-out, background-color var(--t-fast) ease-out,
+    opacity var(--t-fast) ease-out;
+}
+
+.upg.can:hover,
+.buyable.can:hover,
+.milestone.can:hover,
+.achievement.can:hover,
+.challenge.can:hover,
+.tile.can:hover,
+.opt.can:hover,
+.longUpg.can:hover,
+.smallUpg.can:hover,
+.longUpg.can:hover,
+.reset.can:hover,
+.prestige-button.can:hover {
+  transform: translateY(-2px);
+}
+
+/* 按下回弹：比悬停低一点、略缩，做出"按进去了"的手感 */
+.upg.can:active,
+.buyable.can:active,
+.milestone.can:active,
+.achievement.can:active,
+.challenge.can:active,
+.opt.can:active,
+.longUpg.can:active,
+.smallUpg.can:active,
+.reset.can:active,
+.prestige-button.can:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* 树节点（左栏图标 / 侧栏小节点）：悬停放大一点点 */
+.treeNode.can:hover,
+.treeNode.can:focus-visible,
+.treeButton.can:hover {
+  transform: scale(1.06);
+}
+
+/* 子标签按钮：悬停抬起 + 当前项高亮（active 类由引擎加） */
+.tabButton:hover { transform: translateY(-1px); }
+.tabButton:active { transform: translateY(0) scale(0.985); }
+
+/* 当前子标签：亮一档的纱 + 亮边（用更亮的 veil，不占伪元素，避免和 .notify/.resetNotify 打架） */
+.tabButton.active {
+  border-color: var(--rt-glow-ring);
+  background-image: linear-gradient(rgba(223, 243, 255, 0.1), rgba(223, 243, 255, 0.1)),
+    linear-gradient(var(--rt-veil-soft), var(--rt-veil-soft));
+  color: var(--rt-ink);
+}
+
+/* ---- G3. 成就/里程碑："刚达成"的观感靠类变化时的过渡完成 ----
+   刻意**不**写 `.done { animation: … }`：页面一打开所有已达成项会同时播一遍，
+   看起来像整屏在闪（工作区笔记里踩过同类坑）。过渡只在类变化的那一帧生效。 */
+.milestone,
+.milestoneDone,
+.achievement,
+.challenge {
+  transition: transform var(--t-base) ease-out, background-color var(--t-base) ease-out,
+    border-color var(--t-base) ease-out, color var(--t-base) ease-out;
+}
+
+/* ---- G4. 背景极光漂移：**只有这一层**常驻动画 ----
+   只动 transform（合成器操作），周期 90 秒、幅度 1% 左右，几乎察觉不到在动，
+   但页面不再是"死"的。will-change 只写在这一层上（写几百个元素才是灾难）。 */
+body::before {
+  animation: rt-drift 90s ease-in-out infinite alternate;
+  will-change: transform;
+  transform-origin: 50% 40%;
+}
+
+/* 弹窗入场：在原有 opacity/位移过渡之上加一点缩放（过渡，不是 animation，
+   所以不会干扰引擎 fade 类那套 opacity 淡出） */
+.popup.fade-enter {
+  transform: translateY(10px) scale(0.98);
+}
+
+/* 焦点可见性：键盘操作时给个明确的环（纯静态，不动画） */
+.can:focus-visible,
+.tabButton:focus-visible,
+.opt:focus-visible,
+.treeNode:focus-visible {
+  outline: 2px solid var(--rt-glow-ring-ice);
+  outline-offset: 2px;
+}
+
+/* ---- G5. 右栏内容入场 ----
+   只在**右栏**挂这条：引擎在每次切层/切子标签时会重放它（见 engine/tabs.js 的
+   restartEnterAnim —— vdom 是原地 patch，class 不变所以动画不会自己重播）。
+   0.18s、单元素，成本可以忽略。 */
+#rightContent {
+  animation: rt-tab-in 0.18s ease-out;
+}
+
+/* ---- G6. 无障碍 / 省电：用户要求减少动效时**全部关掉** ----
+   （系统级设置，也是这套动效的"紧急开关"；写在这里而不是 base.css，
+    方便整块删除或整块禁用。） */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+

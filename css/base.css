@@ -280,7 +280,12 @@ body {
    -------------------------------------------------------------------------- */
 body::before {
   content: "";
-  position: absolute;
+  /* ★ fixed 而不是 absolute：这层现在带 `rt-drift` 漂移动画（motion.css），
+     而**变换后的盒子会计入可滚动溢出区** —— 用 absolute 时 scale(1.03~1.06)
+     会让文档 scrollWidth 从 1600 涨到 1614，页面上冒出横向滚动条（几何门禁抓到）。
+     fixed 定位的元素不参与可滚动溢出，从根上避免这个副作用。
+     顺带一个好处：页面滚动时极光不再跟着走。 */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;

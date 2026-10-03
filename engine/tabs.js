@@ -70,6 +70,19 @@ function updateTabFormat(layer) {
 }
 
 // ---- 导航 ---------------------------------------------------------------
+// 切标签/子标签时重放一次内容入场动效。
+// 为什么需要手动来这一下：CSS 动画只在元素**新建**或 animation 属性**变化**时开始，
+// 而我们的 vdom 是原地 patch（元素一直存在、class 也不变），所以不动手重置的话
+// 入场动画一辈子只播一次。做法是标准的 animation:none → 强制重排 → 清空。
+function restartEnterAnim() {
+  if (typeof document === 'undefined') return;
+  const el = document.getElementById('rightContent') || document.getElementById('tabContent');
+  if (!el || !el.style) return;
+  el.style.animation = 'none';
+  void el.offsetWidth;      // 强制重排，浏览器才会接受"动画重新开始"
+  el.style.animation = '';
+}
+
 function showTab(name, prev) {
   if (LAYERS.includes(name) && !layerunlocked(name)) return;
   if (player.tab !== name) clearParticles(function (p) { return p.layer === player.tab; });
@@ -81,6 +94,7 @@ function showTab(name, prev) {
   updateTabFormats();
   needCanvasUpdate = true;
   RT.requestRender();
+  restartEnterAnim();
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 
@@ -97,6 +111,7 @@ function showNavTab(name, prev) {
   updateTabFormats();
   needCanvasUpdate = true;
   RT.requestRender();
+  restartEnterAnim();
 }
 
 function goBack(layer) {
@@ -116,4 +131,5 @@ function setSubtab(layer, family, id) {
   updateTabFormats();
   needCanvasUpdate = true;
   RT.requestRender();
+  restartEnterAnim();
 }
