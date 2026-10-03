@@ -543,8 +543,13 @@ RT.components = (function () {
     const b = tmp[layer].bars[data];
     if (!b || !b.unlocked) return null;
     const style = constructBarStyle(layer, data);
-    return h('div', { style: { position: 'relative' } }, [
-      h('div', { style: [b.style, style.dims, { display: 'table' }] }, [
+    // barWrap / barInner 这两个类名是**给样式当钩子**用的：
+    // 条的宽度由内容层给定（SF 的能量条是 600px），而块级盒子不会被父级的
+    // `text-align: center` 居中 —— 没有类名样式就选不中它，条就会左贴
+    //（实测中心比右栏中心偏左 144px）。原生 TMT 的模板里这层是无类的 div，
+    // 所以那里也只能左对齐。
+    return h('div', { class: 'barWrap', style: { position: 'relative' } }, [
+      h('div', { class: 'barInner', style: [b.style, style.dims, { display: 'table' }] }, [
         h('div', { class: 'overlayTextContainer barBorder', style: [b.borderStyle, style.dims] }, [
           h('span', {
             class: 'overlayText',

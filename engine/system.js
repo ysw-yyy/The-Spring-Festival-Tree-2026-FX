@@ -43,8 +43,13 @@ RT.system = (function () {
       kids.push(h('div', { class: 'overlayThing' }, [thing ? h('span', { html: thing }) : null]));
     }
     return h('div', {
-      class: 'overlayThing',
-      style: { 'padding-bottom': '7px', width: '90%', 'z-index': 1000, position: 'relative' },
+      // 头部：**不写内联 width**（内联会盖过样式表，宽度就交不给 CSS 了）。
+      // 它的内容靠 body 的 text-align:center 居中，所以"看起来居中在哪"完全由
+      // 这个盒子的宽度与水平位置决定 —— 分屏时要把它限制在左栏（见 layout.css 的
+      // body[data-split="1"] .overlayHead），否则它会按整页 90% 排，中心落在
+      // 页面中心而不是左栏中心（实测偏右 320px）。
+      class: 'overlayThing overlayHead',
+      style: { 'padding-bottom': '7px', 'z-index': 1000, position: 'relative' },
     }, kids);
   }
 
@@ -226,6 +231,13 @@ RT.system = (function () {
     const leftLayer = player.navTab === 'none' ? player.tab : player.navTab;
     const rightShown = !ended && player.navTab !== 'none' && player.tab !== 'none';
     const split = rightShown && tmp.other.splitScreen;
+    // 把「是否分屏」写到 body 上，供样式使用（CSS 不能从 #treeTab 往后选，
+    // 因为 #overlayHead 在它**前面**）。分屏时头部只应覆盖左栏 —— 原版就是这样：
+    // 实测原版头部 40..752，正好落在左栏 0..792 内；不处理的话头部按整页 100% 排，
+    // 内容中心落在页面中心，看起来就是"航迹偏右"。
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.dataset.split = split ? '1' : '0';
+    }
 
     const kids = [];
     if (!ended) kids.push(h('canvas', { class: 'canvas', attrs: { id: 'treeCanvas' } }));

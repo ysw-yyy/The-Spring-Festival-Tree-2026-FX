@@ -211,8 +211,27 @@
   pointer-events: auto;
 }
 
-/* #overlayHead 是一条通栏：半透明深空底 + 下边一条极淡细线。
-   用 rgba + 半透明而不是实色，让极光透上来一点（静态，零成本）。 */
+/* 顶部头部（引擎给的是 `.overlayThing.overlayHead`，**不再内联宽度**）：
+   它的内容靠 body 的 text-align:center 居中，所以"看起来居中在哪"完全由这个盒子的
+   宽度与水平位置决定。分屏时必须把它限制在左栏 —— 原版实测头部 40..752、正好落在
+   左栏 0..792 内（因为原版的 #treeOverlay 自己就收成了左栏）。
+   不这样做的话它按整页 90% 排，中心落在页面中心，表现就是"最上面的航迹偏右"
+   （实测中心 x=720，而左栏中心是 400）。 */
+.overlayHead {
+  width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body[data-split="1"] .overlayHead {
+  width: 50%;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+/* 以下是这一条通栏的装饰（原样式表里写的是 #overlayHead，但引擎的头部元素一直没有
+   这个 id，所以这些规则以前是**死规则**；现在它带着 .overlayHead 类，改名后才会生效。
+   注意：这里只保留背景与分割线，宽度/定位交给上面的 .overlayHead 规则。 */
 #overlayHead {
   position: absolute;
   top: 0;
@@ -225,6 +244,17 @@
   background-color: rgba(6, 10, 22, 0.72);
   border-bottom: 1px solid var(--rt-line);
   pointer-events: none;
+}
+
+/* 分屏时头部只覆盖**左栏**（原版就是这么做的：实测原版头部 40..752，正好落在左栏
+   0..792 内）。不做这一步的话头部按整页 100% 排版，而它的左右内边距不对称
+   （60 / 104），内容中心会落在页面中心 —— 表现就是"最上面的航迹没有在左边居中"
+   （实测我的版本中心 x=720，左栏中心只有 400，偏右 320px）。
+   分屏标记由引擎写在 body 上（CSS 选不到 #treeTab 之后，因为头部在它前面）。 */
+body[data-split="1"] #overlayHead {
+  width: 50%;
+  padding-left: 40px;
+  padding-right: 40px;
 }
 
 #overlayHead > * {

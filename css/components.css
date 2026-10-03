@@ -544,6 +544,21 @@
   width: 100%;
 }
 
+/* 条形组件的两层包装（类名由引擎加，专给样式当钩子）：
+   条的宽度来自**内容层**（SF 的能量条 `width: 600`），而外层包装是块级盒子、
+   宽度撑满右栏 —— 内层那张 `display: table` 表就贴在左边（实测中心比右栏中心偏左
+   144px）。auto 外边距会吸收剩余空间把它居中（table 盒同样吃 auto 外边距）。
+   原版 TMT 的这层是无类的 div，所以原版是左贴；这条是本风格主动做的居中。 */
+.barInner {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.barWrap {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .bar {
   display: block;
   width: 100%;
