@@ -1766,3 +1766,20 @@ button.upg.treeThing {
   animation: none;
   box-shadow: none;
 }
+/* ==========================================================================
+   I22. A maxed buyable must not look "locked"
+   --------------------------------------------------------------------------
+   The author's screenshot: the reactors are maxed (33.00/33) yet their borders
+   turned dashed. Cause: when a buyable hits its purchase limit the game also
+   marks it .locked (it can no longer be bought), and .locked is styled dashed
+   everywhere (that is the "unavailable" language). For a FINISHED card that
+   reads as broken/placeholder, so anything with .bought is forced back to a
+   solid border and gets a completed look instead.
+   ========================================================================== */
+.buyable.bought,
+.buyable.locked.bought,
+.upg.bought,
+.upg.locked.bought {
+  border-style: solid !important;
+  border-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 55%, var(--rt-line)) !important;
+}
