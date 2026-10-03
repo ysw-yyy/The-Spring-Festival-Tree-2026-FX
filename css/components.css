@@ -1269,3 +1269,11 @@ img {
                     color-mix(in srgb, var(--layer-color) 4%, transparent)),
     linear-gradient(var(--rt-veil-deep), var(--rt-veil-deep));
 }
+/* M12: highlighted character inside upgrade titles (config: ui.titleHighlightChars).
+   Engine wraps each match in <span class="hl">. Static colour + static glow only,
+   no animation and no filter (workspace perf rules). */
+.hl {
+  color: color-mix(in srgb, var(--layer-color, #8fd8ff) 58%, #ffffff);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--layer-color, #8fd8ff) 60%, transparent),
+               0 0 3px color-mix(in srgb, var(--layer-color, #8fd8ff) 75%, transparent);
+}

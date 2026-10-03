@@ -102,6 +102,30 @@ RT.components = (function () {
   }
 
   // ---- 升级 --------------------------------------------------------------
+  // 把配置里指定的字包成 <span class="hl">（M12，见 core.js 的 titleHighlightChars）。
+  // ★ 必须**跳过 HTML 标签内部**：标题里可能带内容层自己写的 <b>/<span>，
+  //   对整串做 replace 会把标签名里的字也换掉（例如 <s> 里的 s），把 HTML 弄坏。
+  function highlightChars(html) {
+    const chars = RT.config.ui && RT.config.ui.titleHighlightChars;
+    if (!chars || html === undefined || html === null || html === '') return html;
+    const s = String(html);
+    let out = '', i = 0;
+    while (i < s.length) {
+      if (s[i] === '<') {
+        const j = s.indexOf('>', i);
+        if (j < 0) { out += s.slice(i); break; }
+        out += s.slice(i, j + 1); i = j + 1; continue;
+      }
+      let hit = false;
+      for (let c = 0; c < chars.length; c++) {
+        const ch = chars[c];
+        if (s.startsWith(ch, i)) { out += '<span class="hl">' + ch + '</span>'; i += ch.length; hit = true; break; }
+      }
+      if (!hit) { out += s[i]; i++; }
+    }
+    return out;
+  }
+
   function upgrade(layer, data) {
     const upg = tmp[layer].upgrades[data];
     if (!upg || !upg.unlocked) return null;
@@ -113,7 +137,7 @@ RT.components = (function () {
     if (layers[layer].upgrades[data].fullDisplay) {
       content.push(h('span', { html: run(layers[layer].upgrades[data].fullDisplay, layers[layer].upgrades[data]) }));
     } else {
-      if (upg.title) content.push(h('span', {}, [h('h3', { html: upg.title }), h('br')]));
+      if (upg.title) content.push(h('span', {}, [h('h3', { html: highlightChars(upg.title) }), h('br')]));
       content.push(h('span', { html: upg.description }));
       if (layers[layer].upgrades[data].effectDisplay) {
         content.push(h('span', {}, [

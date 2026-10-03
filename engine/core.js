@@ -135,6 +135,10 @@ RT.config = {
       // 线上实测落后约 0.18 秒 ≈ 20 个步长，数字就在撒谎了。设上限后不会。
       maxLagSteps: 3,
     },
+    // M12：升级标题里要高亮的字（"小巧思"用）。空字符串 = 不处理。
+    // 例：春节树思念层的升级标题**全部**含"思"，就把那个字挑出来染色/发光。
+    // 引擎只负责包一层 <span class="hl">，具体样式由各模组的样式表写；默认关闭。
+    titleHighlightChars: '',
   },
   layout: {
     thingTreeVariant: 'table',          // O-1：'table'（RG）| 'flex'（SF）
