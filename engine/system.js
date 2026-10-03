@@ -154,8 +154,10 @@ RT.system = (function () {
       h('h3', {}, [text(VERSION.withName)]),
       modInfo.author ? h('span', {}, [h('br'), text('Made by ' + modInfo.author)]) : null,
       h('br'),
-      text('本版本是「不用 TMT / 不用 Vue」的自研引擎重构版（引擎 ' + RT.engineName + ' ' + RT.version + '）'),
-      h('br'),
+      // ★ 按作者要求删掉了两行说明：
+      //   · "本版本是「不用 TMT / 不用 Vue」的自研引擎重构版…"（重构提示，作者不想在说明页露）
+      //     —— 引擎名与版本仍在 RT.engineName / RT.version 里，代码层面照旧
+      //   · 原版说明保留（'原版：The Modding Tree…'）
       text('原版：The Modding Tree 2.6.6.2 模板 + Vue 2 + pako，作者 Acamaeda 等；本作作者 ' + modInfo.author),
       h('br'),
       h('br'),
@@ -165,11 +167,9 @@ RT.system = (function () {
       h('br'),
       h('br'),
       text('游玩时间: ' + formatTime(player.timePlayed)),
-      h('br'),
-      h('br'),
-      h('h3', {}, [text('热键：')]),
-      h('br'),
-      hotkeyLines,
+      // ★ 按作者要求删掉了"热键："那一整块（说明文字 + 键位清单）。
+      //   注意：**只删显示** —— 内容层定义的 hotkeys 仍然生效（options.js 的热键表照旧），
+      //   所以按 p / n / w / y 这些键依旧能重置对应层级。
     ]);
   }
 
