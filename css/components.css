@@ -1544,17 +1544,12 @@ img {
    square size instead. --tree-node is the single knob.
    ========================================================================== */
 .upg.treeThing {
-  width: var(--tree-node, 140px) !important;
-  height: var(--tree-node, 140px) !important;
+  /* 168px：实测最长的节点内容（两行标题 + 当前效果 + Cost）在 140 宽下会溢出，\n     又不想用 overflow: hidden 把字裁掉，所以把正方形放大到装得下为止。 */\n  width: var(--tree-node, 184px) !important;
+  height: var(--tree-node, 184px) !important;
   min-height: 0 !important;
   max-height: none !important;
   aspect-ratio: 1 / 1;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
 }
 
 /* 树里的单元格也按同一尺寸对齐，列宽才不会各行不同 */
@@ -1573,11 +1568,11 @@ img {
    card's own content, and .upg had no pseudo elements in use, so ::before was
    free. :not(.bought):not(.locked) keeps finished/locked cards out of it.
    ========================================================================== */
-.upg.can:not(.bought):not(.locked) {
+.upg.can:not(.bought):not(.locked):not([id^="clickable-"]) {
   border-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 62%, #ffffff) !important;
 }
 
-.upg.can:not(.bought):not(.locked)::before {
+.upg.can:not(.bought):not(.locked):not([id^="clickable-"])::before {
   content: '';
   position: absolute;
   inset: -1px;
@@ -1598,6 +1593,28 @@ img {
 }
 
 /* 按下时给一点回弹（用独立的 scale 属性，避免和 hover 的 transform 打架） */
-.upg.can:not(.bought):not(.locked):active {
+.upg.can:not(.bought):not(.locked):not([id^="clickable-"]):active {
   scale: 0.97;
+}
+/* ==========================================================================
+   I18. Corrections after measuring on a real save
+   --------------------------------------------------------------------------
+   (a) Selector scope: in this game the CLICKABLE buttons also carry the `upg`
+       class (measured: class="upg tooltipBox can", id="clickable-n-11"), so the
+       I17 glow landed on the top row of click-to-fill buttons instead of the
+       upgrade cards the author meant. Clickables always have an id starting
+       with "clickable-", upgrade cards have none, so an id-prefix :not() is the
+       reliable discriminator. I17's three selectors now carry it.
+   (b) Square size: the older rule `button.upg.treeThing` (higher specificity)
+       pinned the width to 124px, so nodes measured 124x168 - not square - and
+       their content needed 166px of height at that width. Using the same
+       specificity here and 170px gives every node one uniform square that fits.
+   ========================================================================== */
+button.upg.treeThing {
+  width: var(--tree-node, 184px) !important;
+  height: var(--tree-node, 184px) !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
 }
