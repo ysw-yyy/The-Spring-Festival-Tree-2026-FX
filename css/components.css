@@ -1808,8 +1808,24 @@ button.upg.treeThing {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  /* 实测：短数值时该行 28px，长数值换行后 41px —— 预留 3 行（=3.45em）就完全不再跳动。 */
-  min-height: 3.45em;
+  /* 结构固定两行：第一行"当前效果:"，第二行数值（见下面两条规则）。
+     于是高度天然稳定在 2.3em —— 不需要再为"数值可能换行"预留第三行空白。 */
+  min-height: 2.3em;
   line-height: 1.15;
+}
+
+/* 包裹层里那个开头的 <br> 在改成块级之后会多顶出一行空行，去掉 */
+.upgEffect > br:first-child {
+  display: none;
+}
+
+/* 标签独占第一行 */
+.upgEffect .upgEffectLabel {
+  display: block;
+}
+
+/* 数值独占第二行；极端长的数字仍可换行，但高度已由 min-height 兜住 */
+.upgEffect .upgEffectLabel + span {
+  display: block;
   overflow-wrap: anywhere;
 }
