@@ -127,7 +127,7 @@ RT.config = {
     smoothNumbers: {
       enabled: false,
       easing: 0.35,        // 每帧向目标靠拢的比例（越大收敛越快）
-      extraDigits: 2,      // 滚动期间额外显示的小数位
+      extraDigits: 0,      // 滚动期间额外显示的小数位（0 = 与最终文本同形状，宽度不跳）
       settle: 1e-6,        // 相对误差小于它就贴回精确文本
     },
   },

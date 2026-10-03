@@ -83,7 +83,7 @@ RT.setConfig({
     infoboxBodyAlwaysInDom: true,
     // M10：数字平滑显示 —— 两次 tick 之间把实时读数滚到目标值，滚动期间多显示两位小数
     //（主循环 20Hz、而 3 位有效数字每秒只变约 1.6 次，所以原来看起来是一跳一跳的）
-    smoothNumbers: { enabled: true, easing: 0.35, extraDigits: 3, settle: 1e-6 },
+    smoothNumbers: { enabled: true, easing: 0.35, extraDigits: 0, settle: 1e-6 },
   },
 
   // C1：春节树的升级树用 div/flex 布局，不是音乐游戏树的 table 布局

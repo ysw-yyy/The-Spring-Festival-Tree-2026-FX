@@ -449,6 +449,22 @@ RT.smoothNumbers = (function () {
         if (t) st.target = t;
       }
       if (!st.target || !st.cur || !st.shape) continue;
+      // ★ 目标"跳变"就直接贴合，不要滚：
+      //   切标签时元素是**复用**的（同一个 DOM 节点换了内容），上一页是 1e20、这一页是四千多，
+      //   滚起来中间会显示成 4236:205 这种四不像（用户实拍报过）。
+      //   判据：形状变了（整数 ↔ 指数）或跨了半个数量级 → 立即贴合。
+      const key = st.shape.exp ? 'e' + st.shape.dec : 'p' + st.shape.dec + (st.shape.comma ? 'c' : '');
+      const shapeChanged = !!st.key && st.key !== key;
+      const logJump = st.shape.exp ? Math.abs(logOf(st.target) - logOf(st.cur)) : 0;
+      // 纯整数（无指数、无小数）也不滚：数值本来就每帧在涨，滚动只会把整数磨出小数尾巴。
+      const plainInteger = !st.shape.exp && st.shape.dec === 0;
+      if (shapeChanged || logJump > 0.5 || plainInteger) {
+        st.cur = { m: st.target.m, e: st.target.e };
+        st.key = key;
+        if (el.textContent !== st.text) { el.textContent = st.text; stats.snaps++; }
+        continue;
+      }
+      st.key = key;
       // 相对误差够小 → 精确贴回原文本（静止时与原版逐字一致）
       const rel = st.target.m !== 0 ? Math.abs(st.cur.m - st.target.m) / Math.abs(st.target.m) : Math.abs(st.cur.m);
       if (st.cur.e === st.target.e && rel <= cfg.settle) {
