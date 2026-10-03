@@ -282,3 +282,27 @@ body::before {
      inline for bars flagged instant, which overrides this duration. */
   transition: clip-path 0.16s linear;
 }
+/* ==========================================================================
+   Bottom-right popups: entrance animation
+   --------------------------------------------------------------------------
+   Popups are rendered from the vdom every tick, so on insert there was no
+   entrance at all - they simply blinked into existence.
+
+   ★ fill-mode MUST be `backwards`, never `both`.
+   popup.css explains why: `both` pins the final keyframe (opacity: 1) with
+   animation priority, so the .fade-leave-active transition can no longer move
+   opacity and the popup vanishes instantly instead of fading out. `backwards`
+   applies the 0% frame only *before* the animation starts (no flash on insert)
+   and hands everything back afterwards.
+
+   Only opacity/transform are animated, and popups are small, so this stays on
+   the cheap side; prefers-reduced-motion at the end of this file still wins.
+   ========================================================================== */
+@keyframes rt-popup-in {
+  from { opacity: 0; transform: translateX(22px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.popup {
+  animation: rt-popup-in 0.26s cubic-bezier(0.22, 0.9, 0.3, 1) backwards;
+}

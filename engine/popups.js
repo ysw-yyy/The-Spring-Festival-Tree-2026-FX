@@ -58,6 +58,9 @@ RT.popups = {
       const classes = ['popup', popup.type];
       if (popup.leaving) classes.push('fade-leave-active', 'fade-leave-to');
       kids.push(h('div', {
+        // ★ key 必须有：没有它时子节点按**位置**复用，同屏多个弹窗时
+        //   新内容会落到旧节点的壳里（出现动画不播、淡出状态也错位）。
+        key: popup.id,
         class: classes.join(' '),
         style: popup.color ? { 'background-color': popup.color } : null,
         data: { act: 'closePopup' },
