@@ -27,6 +27,10 @@
   gap: 10px;
   width: 320px;
   max-width: calc(100vw - 28px);
+  /* 一次涌入很多弹窗时（导入高进度存档后里程碑集中达成就是这种），
+     不设上限这一列会长到几千像素、把整屏盖住。这里只保留最新的一屏内。 */
+  max-height: calc(100vh - 44px);
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -37,6 +41,12 @@
 /* --------------------------------------------------------------------------
    2. 弹窗本体
    极光风：半透明深空底 + 1px 冷色描边 + 左上角一道"极光色条"。
+
+   ★ `background-image` 那条深纱不能删：引擎会给弹窗内联
+   `background-color: <层色>`（里程碑/成就弹窗用层色，而不少层色是浅色，
+   例如希望层 #FEFFBB、反物质层 #84F9B1）。本风格的正文是**浅色** ink，
+   直接压在浅层色上就是"浅字压浅底"、完全读不清（实测走过一版）。
+   叠一层深纱后，任何层色都会变成深色调的底，浅字始终可读。
    -------------------------------------------------------------------------- */
 .popup {
   position: relative;
@@ -48,7 +58,7 @@
   border: 1px solid var(--rt-line-strong);
   border-radius: var(--radius-lg);
   background-color: var(--background_tooltip);
-  background-image: none;
+  background-image: linear-gradient(var(--rt-veil), var(--rt-veil));
   color: var(--rt-ink);
   text-align: center;
   overflow-wrap: anywhere;
