@@ -743,11 +743,39 @@ function gameLoop(diff) {
   }
 }
 
+// 硬重置的"已武装"状态：见下面 hardReset 的注释。
+var hardResetArmed = false;
+var hardResetTimer = null;
+
 function hardReset(resetOptions) {
   const msg = (RT.config.ui.strings && RT.config.ui.strings.hardResetConfirm) ||
     '你确定要进行硬重置吗？这将删除你的所有进度！';
-  if (!confirm(msg)) return;
-  // 硬重置：直接把存档抹掉（比“先写再刷新”可靠，异步写入不保证在刷新前落盘）
+
+  // ★ 为什么不能只依赖 confirm()：浏览器允许用户勾选"阻止此页面创建更多对话框"，
+  //   一旦勾上，`confirm()` 会**永远返回 false** —— 表现就是"点了硬重置没反应"（用户实报）。
+  //   所以这里做成两步确认：先 confirm；如果它被压掉（返回 false），就把按钮"武装"起来，
+  //   5 秒内**再点一次**即执行。两条路都能用，且都仍然需要明确的二次动作。
+  let ok = false;
+  if (hardResetArmed) {
+    ok = true;
+  } else {
+    try { ok = confirm(msg); } catch (e) { ok = false; }
+  }
+  if (!ok) {
+    hardResetArmed = true;
+    const el = document.querySelector('[data-act="hardReset"]');
+    if (el) el.textContent = '再点一次确认硬重置！';
+    RT.warn('硬重置已武装：5 秒内再点一次即执行（浏览器可能拦截了确认对话框）');
+    if (hardResetTimer) clearTimeout(hardResetTimer);
+    hardResetTimer = setTimeout(function () {
+      hardResetArmed = false;
+      const e2 = document.querySelector('[data-act="hardReset"]');
+      if (e2) e2.textContent = '硬重置';
+    }, 5000);
+    return;
+  }
+
+  // 硬重置：直接把存档抹掉（比"先写再刷新"可靠，异步写入不保证在刷新前落盘）
   try {
     localStorage.removeItem(modInfo.id);
     if (resetOptions) localStorage.removeItem(modInfo.id + '_options');

@@ -181,28 +181,29 @@ RT.system = (function () {
   }
 
   function optionsTab() {
-    return h('table', {}, [
-      h('tr', {}, [
-        optButton('保存', 'save'),
-        optButton('自动保存: ' + (options.autosave ? '是' : '否'), 'toggleOpt', 'autosave'),
-        optButton('硬重置', 'hardReset'),
-      ]),
-      h('tr', {}, [
-        optButton('导出存档', 'exportSave'),
-        optButton('导入存档', 'importSave'),
-        optButton('离线进度: ' + (options.offlineProd ? '开' : '关'), 'toggleOpt', 'offlineProd'),
-      ]),
-      h('tr', {}, [
-        optButton('主题: ' + getThemeName(), 'switchTheme'),
-        optButton('显示里程碑: ' + MS_DISPLAYS[MS_SETTINGS.indexOf(options.msDisplay)], 'adjustMSDisp'),
-        optButton('高质量树: ' + (options.hqTree ? '开' : '关'), 'toggleOpt', 'hqTree'),
-      ]),
-      h('tr', {}, [
-        optButton('显示完成的挑战: ' + (options.hideChallenges ? '隐藏' : '显示'), 'toggleOpt', 'hideChallenges'),
-        optButton('单标签模式: ' + (options.forceOneTab ? '永远' : '自动'), 'toggleOpt', 'forceOneTab'),
-        optButton('Shift-Click to Toggle Tooltips: ' + (options.forceTooltips ? 'ON' : 'OFF'), 'toggleOpt', 'forceTooltips'),
-      ]),
-    ]);
+    // 每行三个按钮。行的可见性由 RT.config.ui.hideOptionRows 控制
+    // （1 起算；默认空 = 全部显示，音乐游戏树不受影响；春节树只留前两行）。
+    const rows = [
+      [optButton('保存', 'save'),
+       optButton('自动保存: ' + (options.autosave ? '是' : '否'), 'toggleOpt', 'autosave'),
+       optButton('硬重置', 'hardReset')],
+      [optButton('导出存档', 'exportSave'),
+       optButton('导入存档', 'importSave'),
+       optButton('离线进度: ' + (options.offlineProd ? '开' : '关'), 'toggleOpt', 'offlineProd')],
+      [optButton('主题: ' + getThemeName(), 'switchTheme'),
+       optButton('显示里程碑: ' + MS_DISPLAYS[MS_SETTINGS.indexOf(options.msDisplay)], 'adjustMSDisp'),
+       optButton('高质量树: ' + (options.hqTree ? '开' : '关'), 'toggleOpt', 'hqTree')],
+      [optButton('显示完成的挑战: ' + (options.hideChallenges ? '隐藏' : '显示'), 'toggleOpt', 'hideChallenges'),
+       optButton('单标签模式: ' + (options.forceOneTab ? '永远' : '自动'), 'toggleOpt', 'forceOneTab'),
+       optButton('Shift-Click to Toggle Tooltips: ' + (options.forceTooltips ? 'ON' : 'OFF'), 'toggleOpt', 'forceTooltips')],
+    ];
+    const hide = (RT.config.ui && RT.config.ui.hideOptionRows) || [];
+    const trs = [];
+    for (let i = 0; i < rows.length; i++) {
+      if (hide.indexOf(i + 1) >= 0) continue;
+      trs.push(h('tr', {}, rows[i]));
+    }
+    return h('table', {}, trs);
   }
 
   function endgameView() {

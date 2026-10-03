@@ -90,6 +90,8 @@ RT.setConfig({
     smoothNumbers: { enabled: true, easing: 0.35, extraDigits: 0, settle: 1e-6 },
     // M12：思念层所有升级标题都含"思"字 —— 把它挑出来高亮（用户要的小巧思）
     titleHighlightChars: '思',
+    // M13：按用户要求，设置页只保留前两行（保存/自动保存/硬重置、导出/导入/离线进度）
+    hideOptionRows: [3, 4],
   },
 
   // C1：春节树的升级树用 div/flex 布局，不是音乐游戏树的 table 布局

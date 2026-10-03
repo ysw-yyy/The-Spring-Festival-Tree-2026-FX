@@ -139,6 +139,9 @@ RT.config = {
     // 例：春节树思念层的升级标题**全部**含"思"，就把那个字挑出来染色/发光。
     // 引擎只负责包一层 <span class="hl">，具体样式由各模组的样式表写；默认关闭。
     titleHighlightChars: '',
+    // M13：设置页（options-tab）里要隐藏的**行号**（1 起，每行三个按钮）。
+    // 空数组 = 全部显示（引擎默认）。春节树按用户要求只留前两行。
+    hideOptionRows: [],
   },
   layout: {
     thingTreeVariant: 'table',          // O-1：'table'（RG）| 'flex'（SF）
