@@ -1818,3 +1818,20 @@ body.ds-glow .tile::before {
 body.ds-glow .achievement.bought::before {
   border-radius: 0 !important;
 }
+
+/* 进度条 / 能量条也改直角。
+   ---------------------------------------------------------------------------
+   圆角来自 `bars.css` 的 `.barBorder` 与 `.overlayTextContainer`（各 10px），
+   而 `.fill`（填充）**没有自己的圆角**，它靠父级 `.barBorder` 的
+   `border-radius: 10px` + `overflow: hidden` 被裁成圆头。所以只要把
+   `.barBorder` 改直，填充的头自然就方了，不用单独处理 `.fill`。
+
+   注意 `.barBorder` 上还有一条「内凹 + 边缘发光」的 box-shadow 规则
+   （在 §6 里），它与本条特异性相同、都 (0,2,1)，靠书写顺序取胜 ——
+   本条在后面，所以只覆盖 border-radius，不会影响那个阴影。
+   ------------------------------------------------------------------------ */
+body.ds-glow .barBorder,
+body.ds-glow .overlayTextContainer,
+body.ds-glow .barBase {
+  border-radius: 0 !important;
+}
