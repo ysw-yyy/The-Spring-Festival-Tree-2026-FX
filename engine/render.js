@@ -158,6 +158,11 @@ RT.vdom = (function () {
     if (!node) return mount(vnode);
     if (vnode.type === 'text') {
       if (node.nodeType === 3) {
+        // ★ 平滑层接管的节点：把真值写到 data-sm-target 上，**不动文本**
+        //（文本归 requestAnimationFrame 的平滑循环所有）。否则 20Hz 的渲染会把
+        // 平滑层写的中间值冲掉，看起来每秒闪 20 次。
+        const smHost = smoothHostOf(node);
+        if (smHost) { smHost.dataset.smTarget = vnode.text; return node; }
         if (node.data !== vnode.text) node.data = vnode.text;
         return node;
       }
@@ -357,4 +362,124 @@ RT.delegation = (function () {
   }
 
   return { install: install, stopAllHolds: stopAllHolds };
+})();
+
+// ---- M10. 数字平滑显示 -----------------------------------------------------
+// 见 core.js 里 RT.config.ui.smoothNumbers 的注释。要点：
+//   · 主循环 20Hz，但数字文本"格式化后变了才写"，3 位有效数字下每秒只变约 1.6 次；
+//   · 这里用 requestAnimationFrame 在两次 tick 之间把标记过的读数滚到目标值，
+//     滚动期间多显示一两位小数，收敛后精确贴回原文本（所以静止时与原版逐字一致）；
+//   · 渲染器对标记节点的文本"让位"（写进 data-sm-target），避免 20Hz 把中间值冲掉。
+function smoothHostOf(node) {
+  const cfg = RT.config.ui && RT.config.ui.smoothNumbers;
+  if (!cfg || !cfg.enabled) return null;
+  const p = node.parentNode;
+  if (!p || p.nodeType !== 1 || !p.dataset || p.dataset.sm === undefined) return null;
+  return p;
+}
+
+RT.smoothNumbers = (function () {
+  const state = new WeakMap();
+  let rafId = null;
+  let lastCollect = 0;
+  let cache = [];
+  const stats = { frames: 0, writes: 0, snaps: 0, elements: 0 };
+
+  // 解析成「尾数 + 十进制指数」：1.23e45 → {m:1.23,e:45}；123.45 → {m:123.45,e:0}
+  // 用尾数/指数分开表示，1e1000 这种超出 float 范围的值也能平滑（插值在对数空间做）。
+  function parse(text) {
+    const s = String(text).replace(/,/g, '').trim();
+    const m = /^([+-]?\d*\.?\d+)(?:e([+-]?\d+))?$/i.exec(s);
+    if (!m) return null;
+    const mant = parseFloat(m[1]);
+    if (!isFinite(mant)) return null;
+    return { m: mant, e: m[2] === undefined ? 0 : parseInt(m[2], 10) };
+  }
+  function logOf(n) { return Math.log10(Math.abs(n.m)) + n.e; }
+  function fromLog(l) {
+    const e = Math.floor(l);
+    return { m: Math.pow(10, l - e), e: e };
+  }
+  // 目标文本的"形状"：指数形式几位小数 / 普通形式几位小数 / 有无千分位
+  function shapeOf(text) {
+    const s = String(text);
+    const ex = /^([+-]?)(\d+(?:\.(\d+))?)e([+-]?\d+)$/i.exec(s.replace(/,/g, ''));
+    if (ex) return { exp: true, dec: ex[3] ? ex[3].length : 0, expDigits: String(ex[4]).replace(/[+-]/, '').length, sign: ex[1] };
+    const pl = /^([+-]?)(\d+(?:\.(\d+))?)$/.exec(s.replace(/,/g, ''));
+    if (pl) return { exp: false, dec: pl[3] ? pl[3].length : 0, comma: s.indexOf(',') >= 0, sign: pl[1] };
+    return null;
+  }
+  function format(v, shape, extra) {
+    if (!shape) return null;
+    const dec = shape.dec + extra;
+    if (shape.exp) {
+      let m = v.m, e = v.e;
+      if (Math.abs(m) >= 10) { m /= 10; e += 1; }
+      if (Math.abs(m) < 1 && m !== 0) { m *= 10; e -= 1; }
+      return shape.sign + m.toFixed(Math.min(dec, 8)) + 'e' + e;
+    }
+    const plain = Math.abs(v.e) < 15 ? v.m * Math.pow(10, v.e) : v.m;
+    let out = plain.toFixed(Math.min(dec, 8));
+    if (shape.comma) out = out.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return shape.sign + out;
+  }
+
+  function collect() {
+    cache = Array.prototype.slice.call(document.querySelectorAll('[data-sm]'));
+    stats.elements = cache.length;
+  }
+
+  function frame(now) {
+    rafId = requestAnimationFrame(frame);
+    const cfg = RT.config.ui && RT.config.ui.smoothNumbers;
+    if (!cfg || !cfg.enabled) { stop(); return; }
+    stats.frames++;
+    if (document.hidden) return;                       // 后台不烧 CPU
+    if (now - lastCollect > 1500) { collect(); lastCollect = now; }
+    for (let i = 0; i < cache.length; i++) {
+      const el = cache[i];
+      if (!el.isConnected) continue;
+      const raw = el.dataset.smTarget;
+      if (raw === undefined || raw === '') continue;
+      let st = state.get(el);
+      if (!st) { st = { cur: parse(raw), target: parse(raw), text: raw, shape: shapeOf(raw) }; state.set(el, st); }
+      if (raw !== st.text) {                            // 引擎刚写入了新的真值 → 换目标
+        st.text = raw; st.shape = shapeOf(raw);
+        const t = parse(raw);
+        if (t) st.target = t;
+      }
+      if (!st.target || !st.cur || !st.shape) continue;
+      // 相对误差够小 → 精确贴回原文本（静止时与原版逐字一致）
+      const rel = st.target.m !== 0 ? Math.abs(st.cur.m - st.target.m) / Math.abs(st.target.m) : Math.abs(st.cur.m);
+      if (st.cur.e === st.target.e && rel <= cfg.settle) {
+        if (el.textContent !== st.text) { el.textContent = st.text; stats.snaps++; }
+        continue;
+      }
+      // 指数形式在对数空间插值（跨数量级也顺滑），普通形式线性插值
+      let next;
+      if (st.shape.exp) {
+        const l = logOf(st.cur) + (logOf(st.target) - logOf(st.cur)) * cfg.easing;
+        st.cur = fromLog(l);
+      } else {
+        st.cur = { m: st.cur.m + (st.target.m - st.cur.m) * cfg.easing, e: st.target.e };
+      }
+      next = format(st.cur, st.shape, cfg.extraDigits);
+      if (next && el.textContent !== next) { el.textContent = next; stats.writes++; }
+    }
+  }
+
+  function start() {
+    const cfg = RT.config.ui && RT.config.ui.smoothNumbers;
+    if (!cfg || !cfg.enabled || rafId !== null) return false;
+    if (typeof requestAnimationFrame !== 'function') return false;
+    // 用户要求减少动效 → 不滚动（数字仍然是精确值）
+    if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    collect();
+    lastCollect = performance.now();
+    rafId = requestAnimationFrame(frame);
+    return true;
+  }
+  function stop() { if (rafId !== null) cancelAnimationFrame(rafId); rafId = null; }
+
+  return { start: start, stop: stop, stats: stats, collect: collect, parse: parse, shapeOf: shapeOf, format: format };
 })();

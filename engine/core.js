@@ -117,6 +117,19 @@ RT.config = {
     // ★ 默认必须是 false：它改变 DOM 结构，音乐游戏树的样式表里没有对应的折叠规则，
     //   打开会让它的折叠框全部常开。只有配好对应样式的模组（春节树）才开。
     infoboxBodyAlwaysInDom: false,
+    // M10：数字平滑显示。
+    // 背景：主循环 20Hz，但界面上的数字是"格式化后的字符串变了才写 DOM"——
+    // 3 位有效数字下（`7.63e20`）第三位每秒才变约 1.6 次，所以看起来是一跳一跳的。
+    // 瓶颈**不是帧率而是显示精度**，所以这里在两次 tick 之间用 requestAnimationFrame
+    // 把被标记的读数**滚动**到目标值，滚动期间多显示一两位小数（收敛后精确贴回原文本）。
+    // 只改那几个标记节点，不跑 updateTemp、不做整页渲染。
+    // ★ 默认 false：它改变可见文本形态，只有想要这套观感的模组才开。
+    smoothNumbers: {
+      enabled: false,
+      easing: 0.35,        // 每帧向目标靠拢的比例（越大收敛越快）
+      extraDigits: 2,      // 滚动期间额外显示的小数位
+      settle: 1e-6,        // 相对误差小于它就贴回精确文本
+    },
   },
   layout: {
     thingTreeVariant: 'table',          // O-1：'table'（RG）| 'flex'（SF）

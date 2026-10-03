@@ -26,7 +26,7 @@ RT.system = (function () {
     }
     kids.push(h('br'));
     if (player.points.lt('1e1000')) kids.push(h('span', { class: 'overlayThing' }, [text('你有 ')]));
-    kids.push(h('h2', { class: 'overlayThing', attrs: { id: 'points' } }, [text(format(player.points))]));
+    kids.push(h('h2', { class: 'overlayThing', attrs: { id: 'points', 'data-sm': 'head' } }, [text(format(player.points))]));
     if (player.points.lt('1e1e6')) kids.push(h('span', { class: 'overlayThing' }, [text(' ' + modInfo.pointsName)]));
     kids.push(h('br'));
     if (canGenPointsSafe()) {

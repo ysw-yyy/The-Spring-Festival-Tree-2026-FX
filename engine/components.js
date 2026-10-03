@@ -589,7 +589,7 @@ RT.components = (function () {
         : formatWhole(pts === undefined ? 0 : pts));
     return h('div', {}, [
       (pts === undefined || pts.lt('1e1000')) ? h('span', {}, [text('你有 ')]) : null,
-      h('h2', { style: { color: 'var(--points)' } }, [text(value)]),
+      h('h2', { style: { color: 'var(--points)' }, attrs: { 'data-sm': 'main' } }, [text(value)]),
       text(' ' + str(t.resource)),
       layers[layer].effectDescription
         ? h('span', {}, [text(', '), h('span', { html: run(layers[layer].effectDescription, layers[layer]) })])
@@ -603,11 +603,18 @@ RT.components = (function () {
     const t = tmp[layer];
     const p = player[layer] || {};
     return h('div', { style: { 'margin-top': '-13px' } }, [
+      // ★ 数值单独包一层 span 并打上 data-sm：数字平滑层只认这个标记，
+      //   不会去动"你有 X 资源"这种句子里的数字（避免误改文案）。
+      //   加了 span 只是包一层，文本内容与原来逐字相同。
       t.baseAmount !== undefined && t.baseAmount !== null
-        ? h('span', {}, [h('br'), text('你有 ' + formatWhole(t.baseAmount) + ' ' + str(t.baseResource))])
+        ? h('span', {}, [h('br'), text('你有 '),
+            h('span', { attrs: { 'data-sm': 'baseAmount' } }, [text(formatWhole(t.baseAmount))]),
+            text(' ' + str(t.baseResource))])
         : null,
       t.passiveGeneration && t.resetGain
-        ? h('span', {}, [h('br'), text('你正在获得 ' + format(t.resetGain.times(t.passiveGeneration)) + ' ' + str(t.resource) + ' 每秒')])
+        ? h('span', {}, [h('br'), text('你正在获得 '),
+            h('span', { attrs: { 'data-sm': 'passive' } }, [text(format(t.resetGain.times(t.passiveGeneration)))]),
+            text(' ' + str(t.resource) + ' 每秒')])
         : null,
       h('br'),
       h('br'),

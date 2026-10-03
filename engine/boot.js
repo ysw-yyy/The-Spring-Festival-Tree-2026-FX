@@ -131,6 +131,23 @@ RT.boot = async function () {
 
     await load();
     startMainLoop();
+    // M10：数字平滑显示（配置关着时 start() 自己会拒绝）。
+    // 支持 URL 覆盖，方便直接在浏览器里对比观感与开销：
+    //   ?smooth=0 关  |  ?smooth=1 滚 +1 位小数  |  ?smooth=2 +2 位  |  ?smooth=3 +3 位（默认）
+    // 实测（无头 Edge，采样 4s；数值 7.6e20、每秒 +1.26e18）：
+    //   关        → 数字每秒变 1.5 次，(program) 4.3%
+    //   +3 位小数 → 每秒变 20 次，     (program) 约 11%
+    //   其中约 3.9pp 是"每帧重画文本"与**背景漂移**的叠加：把漂移停掉后是 7.6%。
+    try {
+      const q = /[?&]smooth=(\d+)/.exec(String((typeof location !== 'undefined' && location.search) || ''));
+      if (q) {
+        const v = parseInt(q[1], 10);
+        const cfg = RT.config.ui.smoothNumbers;
+        if (v <= 0) cfg.enabled = false;
+        else { cfg.enabled = true; cfg.extraDigits = v; }
+      }
+      RT.smoothNumbers.start();
+    } catch (e) { RT.error('启动数字平滑失败: ' + e.message); }
     startAuxIntervals();
 
     RT.debug.bootedAt = Date.now();
