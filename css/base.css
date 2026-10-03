@@ -106,11 +106,15 @@
   --rt-panel: color-mix(in srgb, var(--background) 84%, var(--color));
   --rt-panel-2: color-mix(in srgb, var(--background) 92%, var(--color));
 
-  /* —— 反相（已完成 / 已达成）：亮面板 + 深字 ——
-     刻意**不**派生自 --color（理由见文件头 §★2）。 */
-  --rt-invert-face: rgba(226, 242, 255, 0.94);
-  --rt-invert-bg: #e2f2ff;
-  --rt-invert-fg: #061524;
+  /* —— 反相（已完成 / 已达成）——
+     原来是「亮面板 + 深字」（rgba(226,242,255,.94)）。用户反馈"右下亮色不太能看"：
+     一屏已购买卡片时白底很刺眼，而且**把层级主题色整块盖掉了**。
+     现在改成「深面板 + 层级色调 + 浅字」：仍然与未完成项一眼可分，但不刺眼、
+     也不会压掉层级色。这里引用 var(--layer-color) 是刻意为之 ——
+     自定义属性在使用处才求值，所以同一份 token 会自动跟着每一层变色。 */
+  --rt-invert-face: color-mix(in srgb, var(--layer-color) 16%, rgba(8, 14, 28, 0.93));
+  --rt-invert-bg: color-mix(in srgb, var(--layer-color) 26%, #0b1424);
+  --rt-invert-fg: #eaf6ff;
 
   /* —— 极光描边（冷色科技感的关键：一条 1px 亮线 + 外描边）—— */
   --rt-edge: 1px solid var(--rt-line-strong);

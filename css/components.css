@@ -1215,3 +1215,35 @@ img {
 .treeNode.can:focus-visible {
   border-color: color-mix(in srgb, var(--layer-color, var(--rt-line-strong)) 85%, #ffffff);
 }
+/* ---- H6. 左侧层级图标：层级色**常驻**（用户要求"左边的颜色要常驻"）
+   以前只有悬停/解锁时才看得到颜色，平时节点是暗的。现在边框与文字始终带层级色，
+   未解锁的只是暗一档，仍然一眼看出"这是哪一层"。锁定节点的斜纹装饰不动（只改边框/文字，
+   不去覆盖 background-image，免得把斜纹冲掉）。 */
+.treeNode,
+.treeButton {
+  border-color: color-mix(in srgb, var(--layer-color) 58%, var(--rt-line-strong));
+}
+
+.treeNode .nodeLabel,
+.treeButton .nodeLabel {
+  color: color-mix(in srgb, var(--layer-color) 80%, #ffffff);
+}
+
+.treeNode.locked,
+.treeButton.locked,
+.treeNode.hidden,
+.treeButton.hidden {
+  border-color: color-mix(in srgb, var(--layer-color) 30%, var(--rt-line));
+}
+
+.treeNode.locked .nodeLabel,
+.treeButton.locked .nodeLabel,
+.treeNode.ghost .nodeLabel {
+  color: color-mix(in srgb, var(--layer-color) 46%, var(--rt-ink-faint));
+}
+
+/* 当前层：环更亮一档（常驻，不依赖悬停） */
+.treeNode.front,
+.treeButton.front {
+  border-color: color-mix(in srgb, var(--layer-color) 92%, #ffffff);
+}
