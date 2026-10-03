@@ -199,7 +199,8 @@ RT.components = (function () {
     if (ms.toggles && got) {
       for (const toggle of ms.toggles) {
         content.push(toggleButton(layer, toggle));
-        content.push(text('\u00a0'));
+        // 不再 push 不换行空格占位：开关已由 CSS 绝对定位到右下角（components.css I9），
+        // 那个空格只会白占一行，把带开关的里程碑撑得比别人高（实测 142 → 98 → 79px）。
       }
     }
     return h('td', {

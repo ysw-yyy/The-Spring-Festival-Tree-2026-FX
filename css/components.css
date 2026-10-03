@@ -1347,3 +1347,31 @@ img {
 .milestoneDone h3 {
   color: color-mix(in srgb, var(--layer-color) 80%, #ffffff);
 }
+/* ==========================================================================
+   I9. Milestone auto-buy toggle: keep every milestone the same size
+   --------------------------------------------------------------------------
+   milestone() in the engine pushes the toggle button straight into the cell,
+   so it stays in normal flow and adds a whole line: measured on the P layer,
+   cells WITH a toggle were 142px tall while cells WITHOUT were 79px - exactly
+   what the user photographed. Pin the toggle to the bottom-right corner
+   instead: the cell height is then decided by its text alone, so both kinds
+   come out the same size. The value below is the measured text height (79px),
+   used as a floor so a very short milestone cannot come out smaller either.
+   ========================================================================== */
+.milestone,
+.milestoneDone {
+  position: relative;
+  min-height: 79px;
+}
+
+.milestone > .smallUpg.can,
+.milestoneDone > .smallUpg.can {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  min-height: 0;
+  height: auto;
+  padding: 2px 10px;
+  font-size: 11px;
+  line-height: 1.25;
+}
