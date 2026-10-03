@@ -1523,19 +1523,45 @@ body.ds-glow .ds-energy-bar-fill {
     inset 0 -2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* 持续脉冲：填充部分一直在「呼吸」，表示它持续在吞吐能量。
+/* 持续脉冲：填充部分的「呼吸」。
    ---------------------------------------------------------------------------
-   刻意**不**动画 box-shadow —— 那是本项目实测最贵的坑之一。
-   改成在 ::after 上放一层固定渐变，只动画它的 opacity（纯合成器操作）。
-   伪元素分工：::before 前身已用于别处，所以这里脉冲走 ::after、
-   「能量锋面」走 ::before，两者不冲突。
+   **这一节经过了一次实测推翻，改前请读完。**
+
+   原始写法是让 `::after`（`inset: 0`，即**整条尺寸** 600×36.5）动画 opacity，
+   当时我以为「只动 opacity = 纯合成器操作，不产生重绘」。**这个假设是错的。**
+
+   实测（CDP 截两张图，量能量条区域的平均像素差，3 轮交错取中位）：
+
+   | 变体 | 区域像素差 | 相对基线 |
+   | --- | --- | --- |
+   | 基线（::after 动画 opacity） | 9.69 | 100% |
+   | `::after` 改为静止 | 3.31 | **34%** |
+   | `::after` 改动画 transform | 5.54 | 54% |
+   | `::after` 静止 + `::before` 加强呼吸 | 3.93 | **41%** |
+
+   结论：**`.fill::after` 单独占了这条区域约 66% 的重绘**，而连 transform
+   版本也只降到 54% —— 因为 `.fill` 有 `overflow: hidden`、又被
+   `.barBorder` 的 `border-radius` + `overflow: hidden` 裁切，还被游戏的
+   `clip-path` 控制，**浏览器无法把这个伪元素提升为独立合成层**，
+   于是任何动画都退化成「每帧重新光栅化整条」。
+   8 条 bar × 21,900 像素 × 60fps 就是白白烧掉的填充率。
+
+   修法：**把动画从「全条尺寸的元素」挪到「很小的元素」上**。
+   `::after` 保持静态渐变（体积感全在渐变本身，不靠闪烁），
+   呼吸交给 `::before` —— 它只有 3px 宽，重绘成本可忽略。
+   代价是损失了「整条同时明灭」，但 41% ↔ 100% 的重绘差异值得。
+
+   **不要改回让 `::after` 动 opacity**，也**不要**给它加 `translateZ(0)`
+   之类的提层尝试：在 `clip-path` + 双层 `overflow: hidden` 的组合下无效。
    ------------------------------------------------------------------------ */
-@keyframes ds-bar-pulse {
+@keyframes ds-bar-front {
   from {
-    opacity: 0.15;
+    opacity: 0.4;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.55);
   }
   to {
-    opacity: 0.95;
+    opacity: 1;
+    box-shadow: 0 0 17px rgba(255, 255, 255, 1);
   }
 }
 
@@ -1557,10 +1583,12 @@ body.ds-glow .ds-energy-bar-fill::after {
     rgba(255, 255, 255, 0.46) 60%,
     rgba(255, 255, 255, 0.9) 100%
   );
-  animation: ds-bar-pulse var(--ds-bar-speed) ease-in-out infinite alternate;
+  /* 静态不透明度比原来动画的中间值略高，弥补不再闪烁的观感损失 */
+  opacity: 0.72;
+  /* 注意：这里**故意没有 animation**，原因见本节顶部 */
 }
 
-/* 填充前沿的一道「能量锋面」：贴在最右端，与脉冲反相呼应 */
+/* 填充前沿的「能量锋面」：贴在最右端，承担整条的呼吸感 */
 body.ds-glow .ds-energy-bar-fill::before {
   content: "";
   position: absolute;
@@ -1576,7 +1604,7 @@ body.ds-glow .ds-energy-bar-fill::before {
     rgba(255, 255, 255, 0.3)
   );
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
-  animation: ds-bar-pulse calc(var(--ds-bar-speed) * 0.62) ease-in-out infinite
+  animation: ds-bar-front calc(var(--ds-bar-speed) * 0.62) ease-in-out infinite
     alternate;
 }
 
