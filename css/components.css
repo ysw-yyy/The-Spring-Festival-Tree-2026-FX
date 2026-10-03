@@ -140,6 +140,34 @@
   padding: 6px;
 }
 
+/* --------------------------------------------------------------------------
+   升级网格：**统一正方形**（用户反馈"整个升级页看起来太乱"）。
+   原来 `.upg` 只用 min-height，卡片会随文字长短变成 130/148 不等高的矩形，
+   整片网格高低参差 —— 实测同一行里就有 130 与 148 两种高度。
+   尺寸取 `--upg-size`（base.css 里定义，150px，窄窗口自动退档）：
+   最长的那条文案（"解锁思维传导中的第 N 个思维导流器"）在 12px/1.2 行高下约需 142px，
+   所以 150px 的方格里放得下（实测溢出 0）。
+   试过用 `flex: 1 1 0` + aspect-ratio 做自适应等分，但基础 `.upgRow` 的 flex-wrap
+   与 0 基线宽组合会把它算坏（实测格子 0 宽、卡片反而撑满整行），所以用确定尺寸。
+   `min-height: 0` 必须写，否则会继承 `.upg` 的 min-height:124px 把正方形顶破。
+   -------------------------------------------------------------------------- */
+.upgCell {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.upgCell > .upg {
+  width: var(--upg-size, 150px);
+  height: var(--upg-size, 150px);
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  font-size: var(--fs-small, 12px);
+  line-height: 1.2;
+  overflow: hidden;
+}
+
 .upgBig {
   width: 200px;
   min-height: 200px;

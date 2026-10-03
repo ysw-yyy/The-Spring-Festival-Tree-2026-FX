@@ -141,6 +141,11 @@
   --fs-huge: 30px;
   --track: 0.06em;
 
+  /* 升级格子：统一正方形。150 是按**最长的那条文案**定的
+     （"解锁思维传导中的第 N 个思维导流器" 在 12px/1.2 行高下约需 142px），
+     窄窗口自动退档，免得文字被裁。 */
+  --upg-size: 150px;
+
   /* —— 交互：只给交互元素，<= 0.15s（P6）—— */
   --t-fast: 0.1s linear;
   --t-base: 0.15s linear;
@@ -724,4 +729,12 @@ textarea {
   .resetNotify::after {
     animation: none;
   }
+}
+
+/* 窄窗口：升级格子退档，保持"正方形 + 放得下文字" */
+@media (max-width: 1100px) {
+  :root { --upg-size: 128px; }
+}
+@media (max-width: 820px) {
+  :root { --upg-size: 108px; }
 }

@@ -138,10 +138,12 @@ RT.components = (function () {
       for (let c = 1; c <= tmp[layer].upgrades.cols; c++) {
         const id = r * 10 + c;
         if (tmp[layer].upgrades[id] !== undefined && tmp[layer].upgrades[id].unlocked) {
-          cells.push(h('div', { class: 'upgAlign' }, [upgrade(layer, id)]));
+          // upgGrid / upgCell 是给样式用的钩子：升级格子做成"等分整行 + 正方形"
+          // 必须有类名可选中（不能只靠 .upgAlign，那个类成就/可购买/可点击也在用）。
+          cells.push(h('div', { class: 'upgAlign upgCell' }, [upgrade(layer, id)]));
         }
       }
-      rowNodes.push(h('div', { class: 'upgRow' }, cells));
+      rowNodes.push(h('div', { class: 'upgRow upgGrid' }, cells));
     }
     return h('div', { class: 'upgTable' }, rowNodes.concat([h('br')]));
   }
