@@ -82,7 +82,11 @@ function milestoneShown(layer, id) {
     case 'incomplete': return !complete;
     case 'never': return false;
   }
-  return false;
+  // ★ 未知/缺失的值一律按"总是显示"处理（原来是 return false）。
+  //   options 存在 localStorage 里、和存档分开，所以浏览器里只要残留一个不认识的值，
+  //   **整页里程碑会全部消失**，而存档/引擎/内容全都正常 —— 极难排查
+  //   （用户实拍报过"里程碑没了"，最后就是这里）。
+  return true;
 }
 
 function updateWidth() {
