@@ -1561,3 +1561,43 @@ img {
 .upgAlign > .upg.treeThing {
   margin: 0 auto;
 }
+/* ==========================================================================
+   I17. Affordable (clickable) upgrades stand out more
+   --------------------------------------------------------------------------
+   Static part: a brighter layer-tinted border so a buyable card reads as
+   "actionable" even with motion disabled.
+   Motion part: a fixed-glow pseudo element that breathes. The workspace perf
+   rules forbid animating box-shadow / filter / text-shadow, so the shadow
+   template here is STATIC and only opacity + the standalone `scale` property
+   animate (both compositor-friendly). z-index:0 keeps the glow behind the
+   card's own content, and .upg had no pseudo elements in use, so ::before was
+   free. :not(.bought):not(.locked) keeps finished/locked cards out of it.
+   ========================================================================== */
+.upg.can:not(.bought):not(.locked) {
+  border-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 62%, #ffffff) !important;
+}
+
+.upg.can:not(.bought):not(.locked)::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 55%, transparent),
+    0 0 14px 2px color-mix(in srgb, var(--layer-color, #8fd8ff) 42%, transparent),
+    inset 0 0 12px color-mix(in srgb, var(--layer-color, #8fd8ff) 16%, transparent);
+  animation: rt-can-glow 2.1s ease-in-out infinite;
+}
+
+/* 只动 opacity / scale —— 阴影模板固定不动（红线） */
+@keyframes rt-can-glow {
+  0%, 100% { opacity: 0.42; scale: 1; }
+  50%      { opacity: 1;    scale: 1.035; }
+}
+
+/* 按下时给一点回弹（用独立的 scale 属性，避免和 hover 的 transform 打架） */
+.upg.can:not(.bought):not(.locked):active {
+  scale: 0.97;
+}
