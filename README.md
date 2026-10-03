@@ -28,7 +28,7 @@ python -m http.server 8126 --directory <本目录>
 
 ```
 index.html          入口（由工具生成：引擎 18 个脚本 → mod.js → engine-config.js → 15 层 → tree.js → RT.boot()）
-engine/             自研引擎 18 个文件（与音乐游戏树共享同一份源，用哈希强制一致）
+engine/             自研引擎 18 个文件（源在 rg/engine，用哈希强制交付副本与源一致）
 vendor/             break_eternity.js（大数库，MIT）
 content/
   mod.js            模组定义（原样）
@@ -40,19 +40,19 @@ css/                深空极光风格 + 动效层（5 个文件；motion.css �
 
 ## 这个模组改过 TMT 引擎的地方（都做成了配置，不是散落的 if）
 
-| 旋钮 | 本模组 | 引擎默认（= 音乐游戏树） | 不改会怎样 |
+| 旋钮 | 本模组 | 引擎默认（= 上游 TMT 语义） | 不改会怎样 |
 | --- | --- | --- | --- |
 | `save.startString/endString` | `2026HappyNewYear` / `2026NewYearTreeMadeByQqQe308` | `TRGTSaveFile` / `EndOfSaveFile` | **直接报错**（读不了原版存档） |
 | `save.legacyBase64Fallback` | `false` | `true` | 多一条上游没有的导入路径 |
-| `hooks.doResetPre` / `onRowReset` / `updateTitle` | 全是 `null` | 音乐游戏树的三处专有逻辑 | 照抄 `doResetPre` 会让**任意层重置静默失效**（`e` 层没有 `bestOnce`） |
+| `hooks.doResetPre` / `onRowReset` / `updateTitle` | 全是 `null` | 上游的三处专有逻辑 | 照抄 `doResetPre` 会让**任意层重置静默失效**（`e` 层没有 `bestOnce`） |
 | `challenge.variant` | `'sf'` | `'rg'` | 挑战结算路径不同 |
 | `loop.normalizeDiffToNumber` | `true` | `false` | 内容层收到的 `diff` 类型不同 |
 | `time.engineNumeric` / `realTimeField` / `resetTimeIsDecimal` | `number` / `realTime` / `false` | `decimal` / `timeplayed` / `true` | **存档里时间的序列化形式不同**；字段名写错不报错、只是静默丢数据 |
 | `theme.list/default/colors` | `['default','aqua']` / `default`（极光色板） | 4 套，默认 rizline | 上游 `switchTheme()` 的写法不同，照抄会切不了主题 |
 | `ui.strings.*` | 英文 | 中文 | 文案串味 |
 | `layout.thingTreeVariant` | `'flex'` | `'table'` | 升级树整片错位 |
-| `ui.infoboxBodyAlwaysInDom` | `true` | `false` | 折叠框（剧情/说明）的正文是"展开才建、收起就删"（上游行为），**那样只能单向播动画**；开了这个开关正文常驻 DOM，配合 CSS 的 `grid-template-rows` 过渡才能双向伸缩。默认必须是 `false`——它改的是 DOM 结构，音乐游戏树没配对应样式，开了会让折叠框全部常开 |
-| `loop.intervalMs` | `25`（40Hz） | `50`（20Hz） | 界面数字的可见刷新率只有 21 次/秒。实测 40Hz → **37~42 次/秒**（循环 JS 成本约 2 倍），60Hz 只到 50 次/秒却要 3 倍成本——已撞上"显示粒度 ÷ 增长速度"这道墙。URL 可覆盖：`?hz=60` / `?hz=20`；音乐游戏树保持 50ms |
+| `ui.infoboxBodyAlwaysInDom` | `true` | `false` | 折叠框（剧情/说明）的正文是"展开才建、收起就删"（上游行为），**那样只能单向播动画**；开了这个开关正文常驻 DOM，配合 CSS 的 `grid-template-rows` 过渡才能双向伸缩。默认必须是 `false`——它改的是 DOM 结构，没配对应样式时开了会让折叠框全部常开 |
+| `loop.intervalMs` | `25`（40Hz） | `50`（20Hz） | 界面数字的可见刷新率只有 21 次/秒。实测 40Hz → **37~42 次/秒**（循环 JS 成本约 2 倍），60Hz 只到 50 次/秒却要 3 倍成本——已撞上"显示粒度 ÷ 增长速度"这道墙。URL 可覆盖：`?hz=60` / `?hz=20`；引擎默认仍是 50ms（20Hz） |
 | `ui.smoothNumbers` | `{enabled:true, extraDigits:0}` | `{enabled:false}` | 两次 tick 之间把实时读数滚到目标值（rAF，只写被标记的节点）。`extraDigits` 决定滚动时的小数位（0 = 与最终文本同形状，宽度不跳）；URL 可覆盖：`?smooth=0` 关 / `1~3` 多给几位小数 |
 
 ## 验收（都在无头 Edge 里实跑过）
@@ -74,7 +74,7 @@ css/                深空极光风格 + 动效层（5 个文件；motion.css �
 | 折叠框（圆角一致 + 双向伸缩逐帧采样） | **11/11**（本地与线上） |
 | 动效层体检 + 开销采样（`motion_audit.js`，Profiler 取样占比） | 背景漂移/入场/卡片入场/子标签高亮都实测生效；**动效开关两组差 ≈ 1.8 个百分点的 `(program)`**（本机 fps 不可信，故用占比） |
 
-复跑入口在仓库里：`rg/tests/run_all.cmd`（20 步，含音乐游戏树回归与动效体检；
+复跑入口在仓库里：`rg/tests/run_all.cmd`（14 步，只跑春节树；含动效体检、折叠框、重置按钮、真存档验收；
 有 `C:\Users\22830\Desktop\Saves\2026.txt` 时自动加跑真存档验收，没有就跳过并打印 `[SKIP]`；
 每步失败会自动重试一次并如实标注）。
 
