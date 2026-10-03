@@ -438,11 +438,14 @@
 .reset,
 .prestige-button {
   position: relative;
-  display: inline-flex;
-  flex-flow: column nowrap;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  /* ★ 必须是 inline-block，**不能写成 column flex**：
+     按钮内容是「'重置以获得 ' + <b>数字</b> + ' 资源名'」这种"文本 + 内联元素 + 文本"的混合，
+     一旦容器是 flex，每个文本节点和 <b> 都会变成独立弹性项、竖着排成三行
+     —— 实测我的版本 3 行（`+` / `3.16e49` / `希望粒子` 各一行），原版 1 行。
+     垂直居中不需要 flex：<button> 自带"内容垂直居中"（上游就是靠这个）。
+     居中走 text-align + auto 外边距（下面那条注释解释了 300px 偏移）。 */
+  display: inline-block;
+  text-align: center;
   width: 200px;
   margin-left: auto;
   margin-right: auto;
@@ -485,7 +488,10 @@
   justify-content: center;
   gap: 3px;
   width: 96px;
-  height: 96px;
+  /* 同 .challenge：成就卡片有标题 + 说明，写死高度会被长文案撑破（改成 min-height 后
+     内容短时仍是 96×96 的方块，长了才向下生长）。 */
+  height: auto;
+  min-height: 96px;
   padding: 4px;
   border: 1px solid var(--rt-line-strong);
   border-radius: var(--radius-lg);
@@ -520,10 +526,14 @@
   flex-flow: column nowrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 5px;
   width: 300px;
   max-width: 100%;
-  height: 300px;
+  /* ★ 用 min-height 而不是写死 height：挑战卡片里的「目标 / 奖励 / 当前」是多行文本，
+     固定高度时内容会**溢出圆角框**（实测子节点底部 1056 > 盒子底部 996，
+     文字和 Start 按钮都画到卡片外面）。min-height 让内容短时尺寸不变、长了能撑开。 */
+  height: auto;
+  min-height: 300px;
   padding: 14px;
   border: 1px solid var(--rt-line-strong);
   border-radius: var(--radius-lg);
@@ -554,7 +564,9 @@
   position: relative;
   width: 100%;
   min-width: 140px;
-  height: 75px;
+  /* 里程碑文案有长有短（要求 + 效果两行），写死 75px 遇到长文案会溢出；改成 min-height。 */
+  height: auto;
+  min-height: 75px;
   padding: 8px 14px;
   border-radius: var(--radius-lg);
   text-align: center;
@@ -1016,7 +1028,9 @@
   align-items: center;
   justify-content: center;
   width: 116px;
-  height: 96px;
+  /* 同 .challenge / .achievement：设置项文案有长有短，写死高度会被撑破 → min-height。 */
+  height: auto;
+  min-height: 96px;
   padding: 8px;
   border: 1px solid var(--rt-line-strong);
   border-radius: var(--radius-lg);
