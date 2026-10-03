@@ -131,5 +131,6 @@ function setSubtab(layer, family, id) {
   updateTabFormats();
   needCanvasUpdate = true;
   RT.requestRender();
-  restartEnterAnim();
+  // 切子标签**不**重放右栏入场动画：只有切层/切导航标签才该有（用户实拍"图1切图2出现不该有的动画"）。
+  // restartEnterAnim();
 }
