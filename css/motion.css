@@ -257,3 +257,28 @@ body::before {
   }
 }
 
+
+/* ==========================================================================
+   Energy / progress bar smoothing
+   --------------------------------------------------------------------------
+   The engine writes a new fill width every tick (25ms in this mod), so the bar
+   used to advance in discrete steps. Interpolate the width so it reads as a
+   continuous rise.
+
+   ★ Deliberately a *transition*, never a permanent animation.
+   .fill lives inside .barBG's overflow:hidden + border-radius, so it cannot be
+   promoted to its own compositor layer: any continuous animation there degrades
+   into "re-rasterise the whole bar every frame" (workspace note, round 4 - the
+   pixel diff dropped 9.69 -> 2.65 by removing exactly such an animation).
+   A short transition only runs while the value is actually changing, and it
+   settles by itself as soon as the numbers stop moving.
+
+   The prefers-reduced-motion kill-switch at the end of this file overrides this
+   (it uses !important), so accessibility settings still win.
+   ========================================================================== */
+.barBG.barBorder > .fill {
+  /* progress is carried by clip-path (engine/displays.js constructBarStyle), NOT width -
+     the fill box is always the full bar. The engine already writes transition-duration: 0s
+     inline for bars flagged instant, which overrides this duration. */
+  transition: clip-path 0.16s linear;
+}
