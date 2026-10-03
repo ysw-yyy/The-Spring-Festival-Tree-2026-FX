@@ -77,6 +77,10 @@ RT.setConfig({
       hardResetConfirm: 'Are you sure you want to do this? You will lose all your progress!',
       prestigeFallback: 'You need prestige button text',   // D1
     },
+    // M9：折叠框（剧情/说明）的正文常驻 DOM —— 配合 motion.css 里
+    // grid-template-rows 的过渡，展开/收起都能有伸缩动画。
+    // 上游是"展开时新建、收起时删除"，那种结构只能单向播动画。
+    infoboxBodyAlwaysInDom: true,
   },
 
   // C1：春节树的升级树用 div/flex 布局，不是音乐游戏树的 table 布局

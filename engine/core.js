@@ -110,6 +110,13 @@ RT.config = {
       hardResetConfirm: '你确定要进行硬重置吗？这将删除你的所有进度！',
       prestigeFallback: null,           // O-2
     },
+    // M9：折叠框（剧情/说明）的正文是否**常驻 DOM**。
+    // 上游是"展开时新建、收起时删除"（`opened ? null : h(...)`），这样没法做双向伸缩动画；
+    // 打开这个开关后正文一直存在，靠容器上的 `open` 类 + CSS 的 grid-template-rows
+    // 过渡来做伸缩。
+    // ★ 默认必须是 false：它改变 DOM 结构，音乐游戏树的样式表里没有对应的折叠规则，
+    //   打开会让它的折叠框全部常开。只有配好对应样式的模组（春节树）才开。
+    infoboxBodyAlwaysInDom: false,
   },
   layout: {
     thingTreeVariant: 'table',          // O-1：'table'（RG）| 'flex'（SF）

@@ -51,6 +51,7 @@ css/                深空极光风格 + 动效层（5 个文件；motion.css �
 | `theme.list/default/colors` | `['default','aqua']` / `default`（极光色板） | 4 套，默认 rizline | 上游 `switchTheme()` 的写法不同，照抄会切不了主题 |
 | `ui.strings.*` | 英文 | 中文 | 文案串味 |
 | `layout.thingTreeVariant` | `'flex'` | `'table'` | 升级树整片错位 |
+| `ui.infoboxBodyAlwaysInDom` | `true` | `false` | 折叠框（剧情/说明）的正文是"展开才建、收起就删"（上游行为），**那样只能单向播动画**；开了这个开关正文常驻 DOM，配合 CSS 的 `grid-template-rows` 过渡才能双向伸缩。默认必须是 `false`——它改的是 DOM 结构，音乐游戏树没配对应样式，开了会让折叠框全部常开 |
 
 ## 验收（都在无头 Edge 里实跑过）
 
@@ -87,7 +88,23 @@ css/                深空极光风格 + 动效层（5 个文件；motion.css �
 | 当前子标签高亮（亮一档的纱 + 内嵌下划线） | `.tabButton.active` | 引擎按当前 `subtabs` 加类（新解锁层会回落到第一个标签） |
 | 树节点悬停放大 | `.treeNode.can` | `:hover`（`scale(1.06)`） |
 | 背景极光极慢漂移（90s，位移 ±0.6%、缩放 1.03→1.06） | `body::before` | 唯一一处常驻动画，**只动 transform**（合成器操作）；`will-change` 也只写在这一层 |
+| **折叠框伸缩**（`auto 0fr → auto 1fr`，0.22s） | `.story` / `.story.open` | 点标题展开或收起，双向都有过程；正文淡入慢半拍，先长高度再显字 |
 | 键盘焦点环 | `.can` / `.tabButton` / `.opt` / `.treeNode` | `:focus-visible`，纯静态 |
+
+### 折叠框（剧情/说明）的两个坑（都在这一轮修掉）
+
+1. **圆角/直角混用**：引擎内联了 `border-radius: opened ? 0 : '8px'`（上游原样），
+   一展开就把外框变成直角，而标题栏与正文仍按样式表用圆角 → 看起来"外方内圆"。
+   内联优先级最高，样式里必须 `!important` 才能统一；子元素不用自己写圆角，
+   父级 `overflow: hidden` 会把它们裁成外轮廓的圆角。
+2. **正文的 padding 会让它"收不干净"**：`grid` 行到 `0fr` 时元素自身 padding 仍占高度
+   （实测残留 20px）。要把 padding 挪到内层 `span`（`display: block`）上，
+   外层才能真正塌到 0（实测收起后正文高 = 0）。
+3. **`transition` 写坏会静默失效**：`var(--t-fast)` 本身就是 `0.1s linear`（含缓动），
+   再拼一个 `ease-out` 会让整条声明"计算值无效"而退化成初始值 `all 0s`——
+   计算值看起来**和"被 `.instant` 压过"一模一样**，害我查错方向。
+   验收脚本现在会打印命中该元素的所有 transition 规则，一眼看出谁赢。
+   另外折叠框带 `instant` 类（`base.css: .instant { transition: none }`），覆盖它要 `!important`。
 
 - **`prefers-reduced-motion: reduce` 时全部关闭**（写在同一个文件末尾，等于一个紧急开关）。
 - 背景层已从 `position: absolute` 改成 **`fixed`**：带 `transform: scale()` 的元素会被算进

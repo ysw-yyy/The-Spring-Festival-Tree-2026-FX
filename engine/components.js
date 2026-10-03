@@ -73,8 +73,15 @@ RT.components = (function () {
     if (!boxes || boxes[data] === undefined || !boxes[data].unlocked) return null;
     const box = boxes[data];
     const opened = player.infoboxes[layer] && player.infoboxes[layer][data];
+    // ★ 注意上游的语义是反的：`opened === false` 才是**展开**（正文可见、标记为 `-`）。
+    //   别按名字理解，不然会把折叠状态搞反。
+    const expanded = !opened;
+    const keepBody = !!(RT.config.ui && RT.config.ui.infoboxBodyAlwaysInDom);
+    const body = h('div', { class: 'story-text', style: box.bodyStyle }, [
+      h('span', { html: box.body ? box.body : 'Blah' }),
+    ]);
     return h('div', {
-      class: 'story instant',
+      class: 'story instant' + (keepBody && expanded ? ' open' : ''),
       style: [
         { 'border-color': tmp[layer].color, 'border-radius': opened ? 0 : '8px' },
         box.style,
@@ -88,9 +95,9 @@ RT.components = (function () {
         h('span', { class: 'story-toggle' }, [text(opened ? '+' : '-')]),
         h('span', { html: box.title ? box.title : tmp[layer].name }),
       ]),
-      opened ? null : h('div', { class: 'story-text', style: box.bodyStyle }, [
-        h('span', { html: box.body ? box.body : 'Blah' }),
-      ]),
+      // 开关打开时正文常驻（样式表用 grid-template-rows 做伸缩过渡）；
+      // 关闭时严格保持上游行为（展开才渲染），这样音乐游戏树一个字节都不变。
+      keepBody ? body : (opened ? null : body),
     ]);
   }
 

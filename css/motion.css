@@ -154,7 +154,79 @@ body::before {
   animation: rt-tab-in 0.18s ease-out;
 }
 
-/* ---- G6. 无障碍 / 省电：用户要求减少动效时**全部关掉** ----
+/* ---- G6. 折叠框（剧情/说明）：统一圆角 + 伸缩动画 ----
+   ★ 两件事都源自上游引擎的行为，必须在样式里盖掉/配合：
+   1) **圆角混用**：引擎内联了 `border-radius: opened ? 0 : '8px'`，一展开就把外框
+      变成直角，而标题栏与正文仍按样式表用圆角 —— 看起来就是"外方内圆"。
+      内联样式优先级最高，所以这里要 `!important` 才能统一。
+   2) **伸缩**：引擎（在本模组配置下）让正文常驻 DOM，容器带 `open` 类。
+      用 `grid-template-rows: auto 0fr → auto 1fr` 过渡做真正的双向伸缩；
+      比动画 max-height 好（不需要猜一个够大的高度上限，也不会有回弹）。
+      注意这是布局动画，但只作用在**一个**折叠框元素上，且是用户点击触发的短动画。
+   子元素不需要自己写圆角：父级 `overflow: hidden` 会把它们裁成外轮廓的圆角，
+   这样"外圆内也圆"，不会再出现混搭。 */
+.story {
+  border-radius: var(--radius-lg, 8px) !important;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 0fr;
+  /* ★ 必须 !important：引擎给折叠框带了 `instant` 类，base.css 里
+     `.instant, .fast { transition: none }` 会把它压成 `all 0s`。
+     ★★ 注意别给 `var(--t-fast)` 后面再接缓动函数：那个变量本身是
+     `0.1s linear`（含缓动），再拼一个 `ease-out` 会让整条声明
+     "计算值无效"而退化成初始值 `all 0s` —— 实测踩过，看起来像被 .instant 压过，
+     其实是自己写坏了。要换缓动就写全 `时长 缓动`。 */
+  transition: grid-template-rows 0.22s ease-out,
+    border-color var(--t-fast), background-color var(--t-fast) !important;
+}
+
+.story.open {
+  grid-template-rows: auto 1fr;
+}
+
+/* 正文的 padding 必须挪到内层 span：grid 行收到 0fr 时，**元素自身的 padding
+   仍然占高度**（实测残留 20px，正文"收"不干净）。内层加了 padding 后，
+   外层完全塌到 0，内层被 overflow: hidden 裁掉。 */
+.story-text {
+  padding: 0;
+}
+
+.story-text > span {
+  display: block;
+  padding: 10px;
+}
+
+.story-text {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.16s ease-out;
+}
+
+.story.open .story-text {
+  opacity: 1;
+  transition: opacity 0.2s ease-out 0.06s;   /* 展开时等高度先长出来再显字 */
+}
+
+/* 标题栏：悬停时轻微右移（不用 filter —— 工作区红线里不做 filter 动画） */
+.story-title {
+  transition: background-color var(--t-fast) ease-out, color var(--t-fast) ease-out,
+    transform var(--t-fast) ease-out;
+}
+
+.story-title:hover {
+  transform: translateX(2px);
+}
+
+.story-toggle {
+  transition: transform 0.2s ease-out;
+}
+
+.story.open .story-toggle {
+  transform: scale(1.15);
+}
+
+/* ---- G7. 无障碍 / 省电：用户要求减少动效时**全部关掉** ----
    （系统级设置，也是这套动效的"紧急开关"；写在这里而不是 base.css，
     方便整块删除或整块禁用。） */
 @media (prefers-reduced-motion: reduce) {
