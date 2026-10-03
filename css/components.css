@@ -1511,3 +1511,9 @@ img {
   align-items: center;
   justify-content: center;
 }
+/* I14: the achievement card's own 4px top padding was what kept the name ~5px
+   below the card's centre even after the flex centring (measured: card centre
+   319 vs name centre 324.5). Zero it so the name is dead centre. */
+.achievement {
+  padding-top: 0 !important;
+}
