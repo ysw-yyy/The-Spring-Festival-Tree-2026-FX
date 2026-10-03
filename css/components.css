@@ -1710,3 +1710,59 @@ button.upg.treeThing {
     inset 0 0 54px 14px color-mix(in srgb, #7fd8ff 26%, transparent);
   animation-duration: 1.3s;
 }
+/* ==========================================================================
+   I21. Corrections from the author's screenshots
+   --------------------------------------------------------------------------
+   (a) The reactor cards are BUYABLES, not upgrades - my rules only covered
+       .upg, which is why they had no glow. Buyables get the same layer-tinted
+       inset ring/glow, the same hover boost, and the one-shot flash when they
+       hit their purchase limit (.bought).
+   (b) The author does not want the cool-palette glow on the click-to-fill
+       buttons, so I20's clickable rules are switched off here.
+   ========================================================================== */
+
+/* (a) buyables: same inset language, layer-tinted */
+.buyable.can:not(.bought)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 72%, #ffffff),
+    inset 0 0 18px 3px color-mix(in srgb, var(--layer-color, #8fd8ff) 34%, transparent),
+    inset 0 0 44px 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 15%, transparent);
+  animation: rt-can-glow 2.1s ease-in-out infinite;
+}
+
+.buyable.can:not(.bought):hover::before {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 92%, #ffffff),
+    inset 0 0 22px 5px color-mix(in srgb, var(--layer-color, #8fd8ff) 50%, transparent),
+    inset 0 0 54px 14px color-mix(in srgb, var(--layer-color, #8fd8ff) 24%, transparent);
+  animation-duration: 1.3s;
+}
+
+/* 买到上限（.bought）时闪一次 —— 阴影模板静态，只动 opacity/scale */
+.buyable.bought::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--layer-color, #8fd8ff) 78%, #ffffff),
+    inset 0 0 30px 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 46%, transparent);
+  opacity: 0;
+  animation: rt-buy-flash 0.55s ease-out 1;
+}
+
+/* (b) click-to-fill 按钮：撤掉 I20 的冷色内嵌光 */
+.upg.can[id^="clickable-"]:not(.bought):not(.locked)::before,
+.upg.can[id^="clickable-"]:not(.bought):not(.locked):hover::before {
+  content: none;
+  animation: none;
+  box-shadow: none;
+}
