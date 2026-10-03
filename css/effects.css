@@ -118,24 +118,17 @@ body::after {
   z-index: -1000;
 }
 
-/* 能量粒子层 —— 必须待在「游戏 UI 之上」，否则粒子落在能量条范围内会被条整个盖住。
-   ---------------------------------------------------------------------------
-   层级对照（实测自游戏自己的 css）：
+/* 说明：这里曾有一条 `#deepSpaceEnergy`（z-index: 6 的能量粒子层）。
+   能量微尘已在第五轮**整体移除**（用户要求），所以那条规则与
+   `js/effects.js` 里的能量画布一起删掉了。层级对照留着供以后参考：
+
      bars.css  .barBG  2  /  .fill  3  /  .overlayTextContainer  6
      components.css  tooltip  7
      misc.css  侧栏  20000
      popup.css 弹窗  99999+
-   所以取 6：盖住能量条自身，但仍在 tooltip 与弹窗之下，不糊住任何文字。
-   pointer-events: none 保证它不挡点击（与底层星场画布同理）。 */
-#deepSpaceEnergy {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 6;
-}
+
+   若以后要再加「位于游戏 UI 之上」的层，取 6：盖住能量条自身，
+   但仍在 tooltip 与弹窗之下，不糊住任何文字。记得配 pointer-events: none。 */
 
 /* ---------------------------------------------------------------------------
    2. 可点击元素的辉光与呼吸
@@ -997,8 +990,8 @@ body.ds-glow .tabButton:hover {
      .fill                            填充部分（进度）
    填充按钮是 clickables（id 形如 clickable-p-11）。
 
-   填充时 JS 给对应元素加 .ds-energy-pulse（一次性），
-   同时在 canvas 上以填充前沿为原点炸一把金色粒子。
+   填充时 JS 给对应元素加 .ds-energy-pulse（一次性脉冲）。
+   （原来还会在 canvas 上喷一束微尘，那部分已在第五轮整体移除。）
    ------------------------------------------------------------------------ */
 @keyframes ds-energy-pulse {
   0% {

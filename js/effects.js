@@ -80,19 +80,18 @@
     energyFx: true, // 能量条填充时的脉冲 + 粒子（p 层专属）
     cooldownFx: true, // 计时条（冷却 + 持续时间）
     numberFx: true, // 数值的发光质感（按量级分档）
-    energyMotes: true, // 能量条右侧的等离子能量微尘
-    moteCount: 22, // 每次等级跳变喷出的微尘数量
-    moteMax: 130, // 微尘总数上限（性能保护，别调太高：300+ 时绘制要 1.6ms/帧）
-    moteTrickleN: 2, // 按住期间每次溢出的数量
-    moteTrickleMs: 140, // 按住期间的溢出间隔
-    moteSpreadX: 18, // 横向散布范围（别调大：容器 overflow:hidden 会裁断辉光）
-    moteSpreadY: 16, // 沿条高的散布范围（像素）
 
     // 性能
     maxPixelRatio: 1.25, // 高分屏渲染倍率上限（背景特效不需要原生分辨率）
     maxPixelRatioHigh: 1.0, // 渲染面积过大时进一步压到 1.0，优先保流畅
-    renderScale: 0.75, // 粒子层额外渲染倍率。全屏画布每帧的 clear+合成是固定成本，
-    //                     按 0.75 渲染可省约 44% 像素量，肉眼几乎无差
+    renderScale: 0.55, // 背景画布的额外渲染倍率。**这是本项目最大的单项性能旋钮**，
+    //                     见文件里「第五轮」的说明：整屏 canvas 每帧的合成开销
+    //                     几乎正比于它的像素数。实测（1400×900 视口）：
+    //                       0.75 → 708k 像素，浏览器 (program) 占 52.5%
+    //                       0.55 → 381k 像素，占 35.7%
+    //                       0.45 → 255k 像素，占 33.1%
+    //                       0.35 → 154k 像素，占 25.8%
+    //                     0.55 是「省掉约 1/3 合成开销」与「星点仍看得清」的折中。
     autoQuality: true, // 按实测绘制耗时自动降级/恢复画质
     drawBudgetMs: 6, // 单帧绘制耗时预算，超过 1.7 倍降级、低于 0.7 倍恢复
     frameCap: 0, // 0 = 不限制。省 CPU 的兜底手段，卡顿时可设 30/45
@@ -128,7 +127,7 @@
       starDensity: 0.55,
       maxPixelRatio: 1,
       maxPixelRatioHigh: 1,
-      renderScale: 0.62,
+      renderScale: 0.55,
       cheapSky: true,
       frameCap: 36,
       sparkRate: 2.5,
@@ -211,21 +210,6 @@
   auroraCv.id = "deepSpaceAurora";
   auroraCv.setAttribute("aria-hidden", "true");
 
-  /* 能量粒子专用画布 —— 它必须待在「游戏 UI 之上」。
-     ---------------------------------------------------------------------------
-     踩过的坑：能量微尘原来画在 #deepSpaceCanvas 上，而那张画布是 z-index: -1000
-     （整屏最底层），能量条本身是 DOM。结果粒子只要落在条的范围里就被条**完全盖住**，
-     只有飘到条外的那部分看得见。
-     所以能量粒子单独一层，z-index: 6：高于能量条（底槽 2 / 填充 3 / 文字 6），
-     低于 tooltip（7）、侧栏（20000）与弹窗，不会糊住任何文字与交互。
-     pointer-events: none 保证不挡点击。
-     ----------------------------------------------------------------------- */
-  const energyCv = document.createElement("canvas");
-  energyCv.id = "deepSpaceEnergy";
-  energyCv.setAttribute("aria-hidden", "true");
-
-  let ectx = null;
-  let energyDirty = null; // 上一帧弄脏的矩形，用于只清那一块
 
   let ctx = null;
   let W = 0;
@@ -265,10 +249,6 @@
     }
     if (!document.body.contains(canvas)) document.body.appendChild(canvas);
     ctx = canvas.getContext("2d", { alpha: true });
-    // 能量粒子层**按需挂载**（见 updateEnergyMotes）：
-    // 它是一张整屏透明画布，空着也要参与每帧清空+合成。
-    // 而绝大多数存档根本没解锁 p 层能量条，所以不预先挂上去。
-    ectx = energyCv.getContext("2d", { alpha: true });
     // 检测 ctx.filter 支持情况，不支持就退回不模糊的渲染
     try {
       ctx.filter = "blur(1px)";
@@ -294,16 +274,6 @@
     // 画布缓冲比 CSS 尺寸小，浏览器会按 style 尺寸放大显示。
     // 星点本来就是柔和光点，缩放几乎看不出来，但 clear+合成的像素量省掉近一半。
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // 能量粒子层：用完整的 CSS 像素尺寸（不缩），因为粒子小而亮，缩了会糊。
-    // 关键：这张画布的 CSS 尺寸是 100%，浏览器会按「CSS 显示尺寸 ÷ 内部像素尺寸」
-    // 整体缩放它。所以内部像素尺寸**必须**正好等于 CSS 像素尺寸，
-    // 否则整层被拉伸，粒子位置随之偏移 —— 这就是「粒子错位」的根源。
-    W = window.innerWidth;
-    H = window.innerHeight;
-    energyCv.width = Math.max(1, Math.floor(W));
-    energyCv.height = Math.max(1, Math.floor(H));
-    if (ectx) ectx.setTransform(1, 0, 0, 1, 0, 0);
-    energyDirty = null;
     // 极光层用原始 CSS 像素尺寸，供内部低分辨率渲染使用
     auroraCv.width = Math.max(1, Math.floor(W * Math.min(rawDpr, cap)));
     auroraCv.height = Math.max(1, Math.floor(H * Math.min(rawDpr, cap)));
@@ -900,26 +870,6 @@
     });
   }
 
-  /* 算出粒子的升起位置 —— **固定在能量条右端**。
-     ---------------------------------------------------------------------------
-     曾经按「红色填充部分的可见右端」算，做法是读游戏裁切用的 clip-path：
-
-       style.fillDims.width = bar.width + 1 + 'px'
-       style.fillDims['clip-path'] = 'inset(0% ' + bar.progress + '% 0% 0%)'
-
-     那是能算准的（量过，与渲染一致），但用户要的是**固定在右端**，
-     所以现在直接取条右端，不再随进度移动。
-
-     保留一段历史坑记录（以后要改回「跟前沿」时别再踩）：
-       - 不能用 .fill 的 getBoundingClientRect().right —— .fill 的宽度永远是
-         「整条宽 +1px」，它的右端恒等于条右端，跟进度无关（按它算等于恒取满格）。
-       - 要拿进度就读 tmp[layer].bars[id].progress 或 clipPath 的第二个数，
-         但**量纲是 0~100 的百分数**，不是 0~1 的比例。
-     ----------------------------------------------------------------------- */
-  function energyLeadX(rect) {
-    // 右侧留 8px：那条描边在边缘，粒子压上去会显得毛糙
-    return rect.right - 8;
-  }
 
   function scanEnergyBars() {
     if (!CONFIG.inputFx || !CONFIG.energyFx) return;
@@ -938,22 +888,6 @@
     // 所以这里只「打标记」，颜色与光效都交给 CSS 的 .ds-energy-bar-fill 处理，
     // 绝不能像以前那样给通用 .fill 覆盖 background-image（会把颜色冲掉）。
     const fills = document.querySelectorAll(".fill");
-    // 持续流出：按住填充按钮时，让能量微尘不断从填充前沿溢出，
-    // 而不是只在等级跳变那一刻喷一次 —— 这样「能量感」才是持续的。
-    // 注意：clickable 组件的 class 里**不含** clickable（只有 upg tooltipBox can），
-    // 所以不能靠类名选（实测 querySelectorAll('.clickable') 为 0）；
-    // 按住状态也不体现在 DOM 上，所以由本层自己监听 pointerdown/up 追踪。
-    const nowMs = performance.now();
-    if (energyHolding && nowMs - moteTrickleAt > CONFIG.moteTrickleMs) {
-      moteTrickleAt = nowMs;
-      fills.forEach((el, i) => {
-        if (i >= levels.length) return;
-        const r = el.getBoundingClientRect();
-        if (!r.width) return;
-        // 从**条右端**升起（固定位置，不随进度移动）
-        spawnEnergyMotes(energyLeadX(r), r.top + r.height * 0.5, CONFIG.moteTrickleN);
-      });
-    }
 
     fills.forEach((el, i) => {
       if (i >= levels.length) return;
@@ -972,13 +906,6 @@
       })();
       if (!rose) return;
       pulseOnce(el, "ds-energy-pulse", 620);
-      // 从条右端升起（固定位置）
-      const rect = el.getBoundingClientRect();
-      spawnEnergyMotes(
-        energyLeadX(rect),
-        rect.top + rect.height * 0.5,
-        CONFIG.moteCount
-      );
     });
 
     // 填充按钮：clickable 组件的 class 不含 clickable，只有 upg tooltipBox can，
@@ -991,234 +918,11 @@
       const prev = energyLevelSeen.get(el);
       energyLevelSeen.set(el, d);
       if (prev === undefined || prev === d) return;
-      if (pulseOnce(el, "ds-energy-pulse", 620)) {
-        const rect = el.getBoundingClientRect();
-        // 按钮上方也喷一束微尘，呼应进度条那束
-        spawnEnergyMotes(rect.left + rect.width / 2, rect.top + 4, 12);
-      }
+      pulseOnce(el, "ds-energy-pulse", 620);
     });
   }
 
-  /* --------------------------------------------------------------------------
-     能量微尘（energyMotes）—— 能量条专属的能量质感粒子
-     ---------------------------------------------------------------------------
-     与通用 burst 的区别（用户要求「看起来有能量的感觉」）：
-       · 从填充前沿**向上飘升**，而不是四散炸开
-       · 颜色走青→蓝→白炽，少量暖金点缀，像等离子体而不是火花
-       · 每颗都带**闪烁**（sin 高频抖动）与**拖尾**，像放电
-       · 中心是白炽核心 + 外层彩色辉光，尺寸小但很亮
-     ----------------------------------------------------------------------- */
-  const energyMotes = [];
-  let moteTrickleAt = 0; // 持续流出的节流计时
-  let energyHolding = false; // 是否正按住某个填充按钮
-
-  const MOTE_HUES = [188, 200, 215, 172, 48]; // 青 / 蓝 / 深蓝 / 薄荷 / 少量暖金
-
-  /* 微尘辉光精灵缓存。
-     ---------------------------------------------------------------------------
-     原来每颗微尘每帧都要 createRadialGradient（4 个色标）+ arc + fill，
-     再加一条 createLinearGradient 的拖尾 —— 约 46 颗就是**每帧 92 次渐变对象创建**，
-     全部在 "lighter" 加法混合下填充，是这块最重的开销。
-
-     与星场同样的思路：形态与色相就那么几种，预渲染成精灵，绘制时只 drawImage。
-     色相只有 5 种、半径量化成 2 档，所以最多 10 张小图，一次生成永久复用。
-
-     做法：先画一张「白色径向渐变」当模板，再读出像素、按色相逐像素着色、
-     用 putImageData 写回 —— 这样既保住了原来的衰减曲线，又能换任意色相，
-     不需要为每个色相重跑一次 createRadialGradient。
-     ----------------------------------------------------------------------- */
-  const MOTE_SPRITE_PX = 96; // 精灵边长；绘制时缩放到实际辉光直径
-  const moteSprites = new Map(); // "hue|档位" -> 画布（最多 5 色相 × 2 档 = 10 张）
-
-  function buildMoteSprite(hue, big) {
-    const key = hue + "|" + (big ? 1 : 0);
-    const cached = moteSprites.get(key);
-    if (cached) return cached;
-
-    const N = MOTE_SPRITE_PX;
-    const c = N / 2;
-    const cv = document.createElement("canvas");
-    cv.width = N;
-    cv.height = N;
-    const g = cv.getContext("2d");
-
-    // 模板：白色径向渐变。
-    // 内层半径按档位不同（大档更「散」、小档更「聚」），色标比例与原来一致。
-    const inner = big ? c : c * 0.55;
-    const grad = g.createRadialGradient(c, c, 0, c, c, inner);
-    grad.addColorStop(0, "rgba(255,255,255,1)");
-    grad.addColorStop(big ? 0.22 : 0.55, "rgba(255,255,255,0.72)");
-    grad.addColorStop(big ? 0.55 : 0.85, "rgba(255,255,255,0.28)");
-    grad.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = grad;
-    g.fillRect(0, 0, N, N);
-
-    // 逐像素着色：alpha 原样保留，RGB 换成该色相
-    const img = g.getImageData(0, 0, N, N);
-    const d = img.data;
-    const hh = hue / 60;
-    const i = Math.floor(hh) % 6;
-    const f = hh - Math.floor(hh);
-    const q = 1 - f;
-    let r, gg, b;
-    if (i === 0) { r = 1; gg = f; b = 0; }
-    else if (i === 1) { r = q; gg = 1; b = 0; }
-    else if (i === 2) { r = 0; gg = 1; b = f; }
-    else if (i === 3) { r = 0; gg = q; b = 1; }
-    else if (i === 4) { r = f; gg = 0; b = 1; }
-    else { r = 1; gg = 0; b = q; }
-    const R = (r * 255) | 0;
-    const G = (gg * 255) | 0;
-    const B = (b * 255) | 0;
-    for (let k = 0; k < d.length; k += 4) {
-      d[k] = R;
-      d[k + 1] = G;
-      d[k + 2] = B;
-    }
-    g.putImageData(img, 0, 0);
-    moteSprites.set(key, cv);
-    return cv;
-  }
-
-  function spawnEnergyMotes(x, y, count) {
-    if (!CONFIG.energyFx || !CONFIG.energyMotes) return;
-    const n = Math.round((count || CONFIG.moteCount) * qualityScale);
-    for (let i = 0; i < n; i++) {
-      const spread = (Math.random() - 0.5) * (CONFIG.moteSpreadX || 18);
-      const hue = MOTE_HUES[(Math.random() * MOTE_HUES.length) | 0];
-      energyMotes.push({
-        x: x + spread,
-        y: y + (Math.random() - 0.5) * (CONFIG.moteSpreadY || 16),
-        // 向上为主，横向漂移刻意很小：能量条容器是 overflow:hidden，
-        // 横向漂远了辉光会被条的边缘裁断（看起来像被切了一刀）。
-        vx: (Math.random() - 0.5) * 14,
-        vy: -(10 + Math.random() * 26),
-        r: 1.1 + Math.random() * 1.7,
-        hue: hue,
-        // 拖尾用的纯色。以前每帧 createLinearGradient，现在预先算好一个颜色串，
-        // 绘制时只改 globalAlpha —— 省掉每帧每颗一次的渐变对象创建。
-        tailColor: "hsl(" + hue + ", 100%, 80%)",
-        life: 1,
-        // 衰减刻意偏快：单颗约 1.1~1.7 秒就消亡，形成「不断流过」的观感，
-        // 而不是越积越多糊成一片（实测衰减太慢会顶到数量上限）。
-        decay: 1.1 + Math.random() * 0.7,
-        // 闪烁相位与频率：让每颗独立地明灭，像放电
-        flickPhase: Math.random() * Math.PI * 2,
-        flickSpeed: 11 + Math.random() * 15,
-      });
-    }
-    if (energyMotes.length > CONFIG.moteMax)
-      energyMotes.splice(0, energyMotes.length - CONFIG.moteMax);
-  }
-
-  function updateEnergyMotes(dt, t) {
-    if (!ectx) return;
-
-    // 按需挂载：有粒子才把这张整屏透明画布挂到 DOM 上；
-    // 粒子清空后立刻摘掉，避免长期白占一个参与每帧合成的整屏层
-    // （绝大多数存档根本没解锁能量条，这张画布本该是零成本）。
-    if (energyMotes.length) {
-      if (!document.body.contains(energyCv)) document.body.appendChild(energyCv);
-    } else if (document.body.contains(energyCv)) {
-      energyCv.remove();
-      return;
-    }
-
-    // 自愈：这张画布是 position:fixed + width:100%，会被浏览器按「CSS 显示尺寸 /
-    // 内部像素尺寸」的比值整体缩放。如果两者不一致（窗口在画布建立后才确定尺寸、
-    // 或 resize 事件没跑到），粒子就会被整体拉偏 —— 这正是「粒子错位」的根源。
-    // 每帧比对一次并纠正，代价只是两个数字比较。
-    if (energyCv.width !== Math.floor(W) || energyCv.height !== Math.floor(H)) {
-      energyCv.width = Math.max(1, Math.floor(W));
-      energyCv.height = Math.max(1, Math.floor(H));
-      ectx.setTransform(1, 0, 0, 1, 0, 0);
-      energyDirty = null;
-    }
-
-    // 先清掉上一帧弄脏的那块（只清这一块，不整屏清，
-    // 否则等于每帧往一个整屏画布上糊一次透明清除，白费带宽）
-    if (energyDirty) {
-      ectx.clearRect(
-        energyDirty.x,
-        energyDirty.y,
-        energyDirty.w,
-        energyDirty.h
-      );
-      energyDirty = null;
-    }
-    if (!energyMotes.length) return;
-
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    ectx.save();
-    ectx.globalCompositeOperation = "lighter";
-    for (let i = energyMotes.length - 1; i >= 0; i--) {
-      const p = energyMotes[i];
-      p.life -= p.decay * dt;
-      if (p.life <= 0) {
-        energyMotes.splice(i, 1);
-        continue;
-      }
-      // 上升加速 + 横向阻尼：像被吸上去的能量
-      p.vy -= 26 * dt;
-      p.vx *= 1 - 1.4 * dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-
-      // 闪烁：高频 sin，让它忽明忽暗
-      const flick = 0.55 + 0.45 * Math.sin(t * p.flickSpeed + p.flickPhase);
-      const a = p.life * p.life * flick; // 平方衰减，尾巴更干净
-      if (a < 0.02) continue;
-
-      const R = p.r * (2.2 + p.life * 1.6);
-      const reach = R * 3;
-
-      // 记录需要的清除范围（含辉光半径）
-      if (p.x - reach < minX) minX = p.x - reach;
-      if (p.y - reach < minY) minY = p.y - reach;
-      if (p.x + reach > maxX) maxX = p.x + reach;
-      if (p.y + reach > maxY) maxY = p.y + reach;
-
-      // 外层彩色辉光：直接从精灵缓存取，不再每帧 createRadialGradient。
-      // 精灵内部已带 4 段衰减，整颗的明暗用 globalAlpha 控制。
-      const sprite = buildMoteSprite(p.hue, p.life > 0.55);
-      const side = reach * 2;
-      ectx.globalAlpha = a;
-      ectx.drawImage(sprite, p.x - reach, p.y - reach, side, side);
-
-      // 白炽核心：很小但接近纯白，是「能量」的关键观感（arc 很便宜，保留）
-      ectx.globalAlpha = a * 0.95;
-      ectx.fillStyle = "#ffffff";
-      ectx.beginPath();
-      ectx.arc(p.x, p.y, Math.max(0.6, p.r * 0.72), 0, Math.PI * 2);
-      ectx.fill();
-
-      // 上升拖尾：原来是 createLinearGradient + stroke（每帧一次渐变创建）。
-      // 拖尾很短，用纯色 + globalAlpha 表达渐隐，肉眼几乎无差，但省掉整个渐变对象。
-      const tail = 0.055 + p.life * 0.05;
-      ectx.globalAlpha = a * 0.5;
-      ectx.strokeStyle = p.tailColor;
-      ectx.lineWidth = Math.max(0.6, p.r * 0.75);
-      ectx.beginPath();
-      ectx.moveTo(p.x, p.y);
-      ectx.lineTo(p.x - p.vx * tail, p.y - p.vy * tail);
-      ectx.stroke();
-    }
-    ectx.restore();
-
-    // 下一帧要清的矩形（外扩 2px 防止边缘残影）
-    if (minX < maxX) {
-      energyDirty = {
-        x: Math.max(0, minX - 2),
-        y: Math.max(0, minY - 2),
-        w: maxX - minX + 4,
-        h: maxY - minY + 4,
-      };
-    }
-  }
+  // 能量微尘（energyMotes）在此处，已于第五轮**整体移除**。
 
   /* --------------------------------------------------------------------------
      冷却条（独立于按钮）
@@ -1705,10 +1409,6 @@
       mark("burst");
       mark("shock");
     }
-    // 能量粒子画在**它自己那张位于游戏 UI 之上**的画布上，与 drawParticles 无关：
-    // 它必须每帧跟随能量条的位置重绘，也要保证旧位置被清干净（否则会留残影）。
-    updateEnergyMotes(dt, elapsed);
-    mark("motes");
     if (CONFIG.drawParticles) {
       updateShooting(dt);
       mark("shooting");
@@ -1885,21 +1585,10 @@
         // 否则闪光会晚于点击 150ms（原来的固定轮询间隔），反馈不跟手。
         kickScan();
 
-        // 按住「填充能量条」时标记为按住中，让能量微尘持续从填充前沿溢出。
-        if (e.target && e.target.closest && e.target.closest("[id^='clickable-p-']")) {
-          energyHolding = true;
-        }
       },
       { passive: true }
     );
 
-    // 松开即停止流出（pointerup 挂 window，指针移出按钮也算松开）
-    const releaseHold = () => {
-      energyHolding = false;
-    };
-    window.addEventListener("pointerup", releaseHold, { passive: true });
-    window.addEventListener("pointercancel", releaseHold, { passive: true });
-    window.addEventListener("blur", releaseHold, { passive: true });
 
     bindUnlockEffects();
   }
@@ -2297,15 +1986,6 @@
         renderPixelRatio: dpr,
         auroraPaints: auroraPaints,
         shockwavesTotal: shockwaveTotal,
-        shockwavesAlive: shockwaves.length,
-        motes: energyMotes.length,
-        motesMax: CONFIG.moteMax,
-        // 调试用：前几颗微尘的实际坐标，便于验收「是否从填充前沿升起」
-        motesDebug: energyMotes.slice(-6).map((m) => ({
-          x: Math.round(m.x),
-          y: Math.round(m.y),
-          life: +m.life.toFixed(2),
-        })),
         stars: stars.length,
         // 调试用：冷却条的扫描结果（定位「冷却条没出现」时卡在哪一步）
         cdDebug: cdDebug,
