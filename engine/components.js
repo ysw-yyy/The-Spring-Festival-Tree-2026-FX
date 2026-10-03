@@ -140,7 +140,7 @@ RT.components = (function () {
       if (upg.title) content.push(h('span', {}, [h('h3', { html: highlightChars(upg.title) }), h('br')]));
       content.push(h('span', { html: upg.description }));
       if (layers[layer].upgrades[data].effectDisplay) {
-        content.push(h('span', {}, [
+        content.push(h('span', { class: 'upgEffect' }, [
           h('br'),
           // ⑤ 用户要求高亮"当前效果"这一行：标签包一层带类的 span，值用相邻兄弟选择器
         h('span', { class: 'upgEffectLabel' }, [text('当前效果: ')]),
