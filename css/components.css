@@ -1247,3 +1247,25 @@ img {
 .treeButton.front {
   border-color: color-mix(in srgb, var(--layer-color) 92%, #ffffff);
 }
+/* ---- H7. 树节点：不要那层 88% 深色罩 ----
+   `.treeNode` 命中了通用规则 `background-image: linear-gradient(var(--rt-veil), var(--rt-veil))`，
+   那层近似不透明的深纱把节点自己的层级色填充压成了暗色 —— 用户看到的就是"左侧树节点
+   和右边三个按钮的颜色都没了"。这里改回**层级色调的填充**：底下的内联背景色（引擎按层级色
+   给的）能透出来，再叠一层很淡的层级色渐变提亮，未解锁的仍旧压暗。 */
+.treeNode,
+.treeButton {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--layer-color) 26%, transparent),
+                    color-mix(in srgb, var(--layer-color) 10%, transparent));
+}
+
+.treeNode.locked,
+.treeButton.locked,
+.treeNode.hidden,
+.treeButton.hidden,
+.treeNode.ghost {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--layer-color) 10%, transparent),
+                    color-mix(in srgb, var(--layer-color) 4%, transparent)),
+    linear-gradient(var(--rt-veil-deep), var(--rt-veil-deep));
+}

@@ -229,10 +229,12 @@ body[data-split="1"] .overlayHead {
   margin-right: auto;
 }
 
-/* 以下是这一条通栏的装饰（原样式表里写的是 #overlayHead，但引擎的头部元素一直没有
-   这个 id，所以这些规则以前是**死规则**；现在它带着 .overlayHead 类，改名后才会生效。
-   注意：这里只保留背景与分割线，宽度/定位交给上面的 .overlayHead 规则。 */
-#overlayHead {
+/* 以下是这一条通栏的装饰。★ 注意选择器必须用 **class `.overlayHead`**：
+   原来写的是 id `#overlayHead`，而引擎的头部元素一直没有这个 id（只有 class），
+   所以这条**从来是死规则** —— 头部实际是完全透明的，左栏树节点从它下面透出来，
+   用户看到的就是"左上角航迹被节点挡住"。
+   同时把 z-index 提到树节点之上，保证任何情况下读数都在最上层。 */
+.overlayHead {
   position: absolute;
   top: 0;
   left: 0;
@@ -241,7 +243,7 @@ body[data-split="1"] .overlayHead {
   padding: 6px 104px 8px 60px;
   text-align: center;
   line-height: 1.3;
-  background-color: rgba(6, 10, 22, 0.72);
+  background-color: rgba(6, 10, 22, 0.86);
   border-bottom: 1px solid var(--rt-line);
   pointer-events: none;
 }
@@ -251,12 +253,16 @@ body[data-split="1"] .overlayHead {
    （60 / 104），内容中心会落在页面中心 —— 表现就是"最上面的航迹没有在左边居中"
    （实测我的版本中心 x=720，左栏中心只有 400，偏右 320px）。
    分屏标记由引擎写在 body 上（CSS 选不到 #treeTab 之后，因为头部在它前面）。 */
-body[data-split="1"] #overlayHead {
+body[data-split="1"] .overlayHead {
   width: 50%;
   padding-left: 40px;
   padding-right: 40px;
 }
 
+/* ★ 下面这两条**故意保持死规则**（选择器是 id，而引擎的头部元素只有 class）：
+   · `> * { pointer-events: auto }`：头部里只有文字，没有需要点的东西，不需要放开；
+   · `span/h2/div { display: inline }`：启用会把"你有 X 航迹 / (每秒) / 当前距离"三行
+     挤成一行，偏离原版的读数版式。要启用的话先量一遍头部的行数。 */
 #overlayHead > * {
   pointer-events: auto;
 }
@@ -651,7 +657,7 @@ body[data-split="1"] #overlayHead {
     padding-bottom: 36px;
   }
 
-  #overlayHead {
+  .overlayHead {
     padding: 5px 74px 6px 52px;
   }
 
@@ -747,7 +753,7 @@ body[data-split="1"] #overlayHead {
     white-space: normal;
   }
 
-  #overlayHead {
+  .overlayHead {
     padding: 4px 60px 5px 46px;
   }
 
