@@ -1272,7 +1272,7 @@ img {
 /* M12: highlighted character inside upgrade titles (config: ui.titleHighlightChars).
    Engine wraps each match in <span class="hl">. Static colour + static glow only,
    no animation and no filter (workspace perf rules). */
-.hl {
+.titleHl {  /* renamed from .hl: that class already means `horizontal line'' in layout.css! */
   color: color-mix(in srgb, var(--layer-color, #8fd8ff) 58%, #ffffff);
   text-shadow: 0 0 12px color-mix(in srgb, var(--layer-color, #8fd8ff) 60%, transparent),
                0 0 3px color-mix(in srgb, var(--layer-color, #8fd8ff) 75%, transparent);
@@ -1281,13 +1281,19 @@ img {
    On the dark achieved cards that reads as a stray horizontal line (user report).
    Turn it into a small layer-coloured dot: still signals "done", no longer a line.
    Note: .bought.notify::after (two classes) keeps its hatch - that rule is more specific. */
-/* I6b: user asked to drop the marker entirely ("删了吧"), so kill the pseudo-element.
-   `content: none` removes it no matter which rule created it (its original rule is
-   elsewhere in this file / base.css and is more specific in some combinations, e.g.
-   .bought.notify::after keeps its hatch decoration - that one is intentional). */
+/* I6: RESTORED. The completed marker is shared with milestones (.done / .milestoneDone),
+   so removing it also killed the milestone indicator - my mistake. Kept as a small
+   layer-coloured dot instead of the original 6px near-white bar (that bar looked like
+   a stray line on the dark achieved face). */
 .bought::after,
 .done::after,
 .canComplete::after {
-  content: none;
-  display: none;
+  width: 7px;
+  height: 7px;
+  top: 6px;
+  right: 6px;
+  bottom: auto;
+  left: auto;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 72%, #ffffff);
 }

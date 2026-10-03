@@ -119,7 +119,7 @@ RT.components = (function () {
       let hit = false;
       for (let c = 0; c < chars.length; c++) {
         const ch = chars[c];
-        if (s.startsWith(ch, i)) { out += '<span class="hl">' + ch + '</span>'; i += ch.length; hit = true; break; }
+        if (s.startsWith(ch, i)) { out += '<span class="titleHl">' + ch + '</span>'; i += ch.length; hit = true; break; }
       }
       if (!hit) { out += s[i]; i++; }
     }
