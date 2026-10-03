@@ -148,8 +148,8 @@ RT.config = {
     // 关掉 = 静止实线；prefers-reduced-motion 下会自动关。
     animateBranches: true,
     branchFlowFps: 30,      // 重绘频率：整屏画布的重绘是主要成本，30 足够顺
-    branchDash: [26, 18],   // 虚线节奏（流动的"光段/空隙"）
-    branchDashSpeed: 1.2,   // 每帧推进的偏移量
+    branchDash: [34, 26],   // 光段 / 空隙：拉长一点，脉冲更清楚
+    branchDashSpeed: 1.6,   // 每帧推进的偏移量（30fps 下约 48px/秒）
   },
   layout: {
     thingTreeVariant: 'table',          // O-1：'table'（RG）| 'flex'（SF）

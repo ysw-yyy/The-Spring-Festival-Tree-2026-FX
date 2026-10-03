@@ -30,6 +30,19 @@ var drawnBranches = 0;
 var branchFlowTimer = null;
 var lastBranchAt = 0;
 
+// 颜色明暗：主题色多为 #rgb/#rrggbb，其它写法（如 rgba()）原样返回。
+function branchShade(color, amt) {
+  if (typeof color !== 'string' || color[0] !== '#') return color;
+  let h = color.slice(1);
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return color;
+  const n = parseInt(h, 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  if (amt > 0) { r += (255 - r) * amt; g += (255 - g) * amt; b += (255 - b) * amt; }
+  else { r *= (1 + amt); g *= (1 + amt); b *= (1 + amt); }
+  return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+}
+
 function branchFlowOn() {
   const cfg = RT.config.ui || {};
   if (cfg.animateBranches === false) return false;
@@ -118,18 +131,33 @@ function drawTreeBranch(num1, data, prefix) {
   const y1 = start.top + start.height / 2 + window.scrollY;
   const x2 = end.left + end.width / 2 + window.scrollX;
   const y2 = end.top + end.height / 2 + window.scrollY;
-  ctx.lineWidth = width;
-  // 流动动画：虚线沿连线推进（线宽 15 上的"光段"，观感像能量在连接上流动）。
-  // 关掉动画时用空虚线 = 原来的实线。
   const flow = branchFlowOn();
-  ctx.setLineDash(flow ? branchDashArr() : []);
-  ctx.lineDashOffset = flow ? -branchPhase : 0;
   drawnBranches++;
+  // ① 底轨：静态暗线 —— 让"连接"始终可见（也保证没动画时仍然是实线）。
+  ctx.setLineDash([]);
+  ctx.lineDashOffset = 0;
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = flow ? branchShade(color_id, -0.45) : color_id;
+  ctx.lineWidth = width;
   ctx.beginPath();
-  ctx.strokeStyle = color_id;
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.stroke();
+  // ② 光段：亮色 + 柔光，沿连线推进（观感"能量在连接上流动"）。
+  if (flow) {
+    ctx.setLineDash(branchDashArr());
+    ctx.lineDashOffset = -branchPhase;
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = branchShade(color_id, 0.35);
+    ctx.strokeStyle = branchShade(color_id, 0.62);
+    ctx.lineWidth = Math.max(2, width * 0.55);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.setLineDash([]);
+  }
 }
 
 RT.canvas = {

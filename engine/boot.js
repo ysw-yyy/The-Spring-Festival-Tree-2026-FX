@@ -20,6 +20,12 @@ function startMainLoop() {
       if (!RT.debug.endedRendered) {
         RT.debug.endedRendered = true;
         RT.system.update();
+      // ★ 必须在 vdom 渲染**之后**重绘：这一拍 DOM 已经是新标签的内容，
+      //   矩形正确 → 进页面立刻有线、切标签同一帧换新线（不再残留旧线）。
+      if (needCanvasUpdate) {
+        RT.canvas.draw();
+        needCanvasUpdate = false;
+      }
       }
       return;
     }
@@ -72,9 +78,11 @@ function startMainLoop() {
       if (canvasEl && (canvasEl.width !== window.innerWidth || canvasEl.height !== window.innerHeight)) {
         needCanvasUpdate = true;
       }
-      if (needCanvasUpdate) {
+      // ★ 这里只同步画布尺寸，**不绘制**：此时 DOM 还是上一帧的，
+      //   照旧绘制会用旧矩形画线（进页面时不画线、切标签时残留旧线闪一下）。
+      //   真正的绘制挪到下面 RT.system.update() 之后。
+      if (canvasEl && (canvasEl.width !== window.innerWidth || canvasEl.height !== window.innerHeight)) {
         resizeCanvas();
-        needCanvasUpdate = false;
       }
 
       const treeTab = document.getElementById('treeTab');
@@ -89,6 +97,12 @@ function startMainLoop() {
       adjustPopupTime(trueDiff);
       updateParticles(trueDiff);
       RT.system.update();
+      // ★ 必须在 vdom 渲染**之后**重绘：这一拍 DOM 已经是新标签的内容，
+      //   矩形正确 → 进页面立刻有线、切标签同一帧换新线（不再残留旧线）。
+      if (needCanvasUpdate) {
+        RT.canvas.draw();
+        needCanvasUpdate = false;
+      }
     } catch (e) {
       RT.error('主循环出错: ' + e.message, e.stack);
     } finally {
