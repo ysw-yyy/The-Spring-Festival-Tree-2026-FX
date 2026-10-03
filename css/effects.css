@@ -1778,29 +1778,36 @@ body.ds-glow .overlayThing {
    **必须加 !important**：这些属性写在游戏自己的 CSS 里，而且游戏还会用
    内联 style 给部分元素设圆角；用 !important 才能不依赖书写顺序稳定覆盖。
 
-   **刻意保留圆角的元素**（用户明确要求过，或「圆才是其形态」）：
+   **这几条是「无条件」的，故意不带 `body.ds-glow` 前缀**（本文件里极少数的例外）：
+   圆角是**形状偏好**，不该随特效开关一起开合。实测带前缀时，
+   切到 `?fx=canvas` 或 `?fx=off`（body 上没有 ds-glow 类）按钮会**突然变回圆角**，
+   同一个界面在两种模式下长得不一样。同样理由，圆角也不受设置里
+   「背景特效」开关影响 —— 那个开关只切背景层。
+   （另一处同类例外是窄视口下设置表格的堆叠规则。）
+
+   **刻意保留圆角的元素**：
      .treeNode       左侧层级图标 —— **用户明确要求「层级图标不要改」**，
                      所以它保持 50% 的圆形
      .tooltip        悬停说明，是气泡不是按钮
-     .barBorder      能量条的凹槽
      .longUpg        全圆（50%）的 respec 按钮，属刻意设计
      .treeButton     树上的胶囊形文字节点
    ------------------------------------------------------------------------ */
-body.ds-glow .upg,
-body.ds-glow .buyable,
-body.ds-glow .achievement,
-body.ds-glow .challenge,
-body.ds-glow .tile,
-body.ds-glow .upgBig,
-body.ds-glow .smallUpg,
-body.ds-glow .opt,
-body.ds-glow .reset,
-body.ds-glow .tabButton {
+.upg,
+.buyable,
+.achievement,
+.challenge,
+.tile,
+.upgBig,
+.smallUpg,
+.opt,
+.reset,
+.tabButton {
   border-radius: 0 !important;
 }
 
 /* 特效层自己的圆角也要跟着改，否则光晕/伪元素会比按钮多出一圈圆角。
-   **不要在这里加 .treeNode** —— 层级图标保持圆形，它的光晕也必须保持圆形。 */
+   **不要在这里加 .treeNode** —— 层级图标保持圆形，它的光晕也必须保持圆形。
+   伪元素只在本层的特效启用时才存在，所以这一段保留 ds-glow 前缀即可。 */
 body.ds-glow .upg::after,
 body.ds-glow .upg::before,
 body.ds-glow .buyable::after,
@@ -1829,9 +1836,11 @@ body.ds-glow .achievement.bought::before {
    注意 `.barBorder` 上还有一条「内凹 + 边缘发光」的 box-shadow 规则
    （在 §6 里），它与本条特异性相同、都 (0,2,1)，靠书写顺序取胜 ——
    本条在后面，所以只覆盖 border-radius，不会影响那个阴影。
+
+   同样**不带 ds-glow 前缀**，理由与上面按钮一致。
    ------------------------------------------------------------------------ */
-body.ds-glow .barBorder,
-body.ds-glow .overlayTextContainer,
-body.ds-glow .barBase {
+.barBorder,
+.overlayTextContainer,
+.barBase {
   border-radius: 0 !important;
 }
