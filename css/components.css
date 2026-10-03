@@ -1323,3 +1323,27 @@ img {
   margin-top: 8px;
   margin-bottom: 0;
 }
+/* I8: make achieved milestones clearly distinct again. Changing --rt-invert-bg to a dark
+   value (to stop the harsh near-white face) also removed the visual difference between
+   achieved and pending milestones. Keep it dark but obviously "done": a layer-tinted
+   face one step brighter than pending, a strong layer border, and a thick left bar. */
+.milestone,
+.milestoneDone {
+  background-color: color-mix(in srgb, var(--layer-color) 22%, #101a2e);
+  border-color: color-mix(in srgb, var(--layer-color) 70%, #ffffff);
+}
+
+.milestone {
+  /* pending stays recessed / dimmer */
+  background-color: color-mix(in srgb, var(--layer-color) 7%, #0a1120);
+  border-color: color-mix(in srgb, var(--layer-color) 22%, var(--rt-line));
+}
+
+.milestoneDone::before {
+  width: 4px;
+  background-color: color-mix(in srgb, var(--layer-color) 82%, #ffffff);
+}
+
+.milestoneDone h3 {
+  color: color-mix(in srgb, var(--layer-color) 80%, #ffffff);
+}
