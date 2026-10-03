@@ -1773,12 +1773,14 @@ body.ds-glow .overlayThing {
    ---------------------------------------------------------------------------
    用户要求「大部分按钮改成直角」。游戏原本给按钮设了各种圆角
    （`.upg` / `.buyable` / `.achievement` / `.challenge` / `.tile` 是 15~33%，
-   `.tabButton` 是 10px，`.treeNode` 是 50% 的圆形）。
+   `.tabButton` 是 10px）。
 
    **必须加 !important**：这些属性写在游戏自己的 CSS 里，而且游戏还会用
    内联 style 给部分元素设圆角；用 !important 才能不依赖书写顺序稳定覆盖。
 
-   **刻意保留圆角的元素**（它们是「不是按钮」或「圆才是其形态」）：
+   **刻意保留圆角的元素**（用户明确要求过，或「圆才是其形态」）：
+     .treeNode       左侧层级图标 —— **用户明确要求「层级图标不要改」**，
+                     所以它保持 50% 的圆形
      .tooltip        悬停说明，是气泡不是按钮
      .barBorder      能量条的凹槽
      .longUpg        全圆（50%）的 respec 按钮，属刻意设计
@@ -1793,12 +1795,12 @@ body.ds-glow .upgBig,
 body.ds-glow .smallUpg,
 body.ds-glow .opt,
 body.ds-glow .reset,
-body.ds-glow .tabButton,
-body.ds-glow .treeNode {
+body.ds-glow .tabButton {
   border-radius: 0 !important;
 }
 
-/* 特效层自己的圆角也要跟着改，否则光晕/伪元素会比按钮多出一圈圆角 */
+/* 特效层自己的圆角也要跟着改，否则光晕/伪元素会比按钮多出一圈圆角。
+   **不要在这里加 .treeNode** —— 层级图标保持圆形，它的光晕也必须保持圆形。 */
 body.ds-glow .upg::after,
 body.ds-glow .upg::before,
 body.ds-glow .buyable::after,
@@ -1808,9 +1810,7 @@ body.ds-glow .achievement::before,
 body.ds-glow .challenge::after,
 body.ds-glow .challenge::before,
 body.ds-glow .tile::after,
-body.ds-glow .tile::before,
-body.ds-glow .treeNode::after,
-body.ds-glow .treeNode::before {
+body.ds-glow .tile::before {
   border-radius: 0 !important;
 }
 
