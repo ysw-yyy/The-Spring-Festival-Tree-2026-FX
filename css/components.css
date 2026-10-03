@@ -1618,3 +1618,28 @@ button.upg.treeThing {
   aspect-ratio: 1 / 1;
   box-sizing: border-box;
 }
+/* ==========================================================================
+   I19. The glow must live INSIDE the card
+   --------------------------------------------------------------------------
+   Measured: .upg cards carry overflow:hidden (added earlier to keep text inside
+   the square), so I17's outer 14px spread was clipped away and only a 16% inset
+   remained - invisible in practice, which is exactly what the author reported
+   ("no glow here").
+   Fix: paint everything inside the card - a crisp 1px ring plus two inset glows.
+   Clipping cannot remove any of it. z-index:0 keeps it above the card's own
+   background yet below nothing important; alphas stay low so the text stays
+   readable. The breathing animation is unchanged (opacity/scale only).
+   ========================================================================== */
+.upg.can:not(.bought):not(.locked):not([id^="clickable-"])::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 72%, #ffffff),
+    inset 0 0 18px 3px color-mix(in srgb, var(--layer-color, #8fd8ff) 34%, transparent),
+    inset 0 0 44px 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 15%, transparent);
+  animation: rt-can-glow 2.1s ease-in-out infinite;
+}
