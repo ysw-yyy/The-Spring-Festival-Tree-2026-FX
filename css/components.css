@@ -1277,3 +1277,19 @@ img {
   text-shadow: 0 0 12px color-mix(in srgb, var(--layer-color, #8fd8ff) 60%, transparent),
                0 0 3px color-mix(in srgb, var(--layer-color, #8fd8ff) 75%, transparent);
 }
+/* I6: the "completed" corner marker was a 6px near-white bar (inset 4px 4px 126px 126px).
+   On the dark achieved cards that reads as a stray horizontal line (user report).
+   Turn it into a small layer-coloured dot: still signals "done", no longer a line.
+   Note: .bought.notify::after (two classes) keeps its hatch - that rule is more specific. */
+.bought::after,
+.done::after,
+.canComplete::after {
+  width: 7px;
+  height: 7px;
+  top: 6px;
+  right: 6px;
+  bottom: auto;
+  left: auto;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 72%, #ffffff);
+}
