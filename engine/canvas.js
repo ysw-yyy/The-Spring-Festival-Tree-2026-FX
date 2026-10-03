@@ -25,8 +25,50 @@ function resizeCanvas() {
   drawTree();
 }
 
+var branchPhase = 0;
+var drawnBranches = 0;
+var branchFlowTimer = null;
+var lastBranchAt = 0;
+
+function branchFlowOn() {
+  const cfg = RT.config.ui || {};
+  if (cfg.animateBranches === false) return false;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  return true;
+}
+
+function branchDashArr() {
+  const d = (RT.config.ui && RT.config.ui.branchDash) || [26, 18];
+  return d.slice();
+}
+
+// 只在"真有连线被画出来 + 动画开着 + 页面可见"时循环，且按 branchFlowFps 限帧。
+// 整屏画布每次重绘都要重新合成，所以这里刻意不用 60fps。
+function startBranchFlow() {
+  if (!branchFlowOn()) return;
+  if (branchFlowTimer !== null) return;
+  const fps = (RT.config.ui && RT.config.ui.branchFlowFps) || 30;
+  const interval = 1000 / fps;
+  const speed = (RT.config.ui && RT.config.ui.branchDashSpeed) || 1.2;
+  const dash = branchDashArr();
+  const period = dash[0] + dash[1];
+  branchFlowTimer = setInterval(function () {
+    if (document.hidden) return;
+    const now = performance.now();
+    if (now - lastBranchAt < interval - 2) return;
+    lastBranchAt = now;
+    branchPhase = (branchPhase + speed) % period;
+    drawTree();
+  }, Math.max(16, Math.round(interval)));
+}
+
+function stopBranchFlow() {
+  if (branchFlowTimer !== null) { clearInterval(branchFlowTimer); branchFlowTimer = null; }
+}
+
 function drawTree() {
   if (!retrieveCanvasData()) return;
+  drawnBranches = 0;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const layer in layers) {
     if (!tmp[layer]) continue;
@@ -37,6 +79,8 @@ function drawTree() {
     drawComponentBranches(layer, tmp[layer].buyables, 'buyable-');
     drawComponentBranches(layer, tmp[layer].clickables, 'clickable-');
   }
+  // 画完之后：有连线就启动/保持流动，没有就停掉（没有连线的标签页零成本）
+  if (drawnBranches > 0) startBranchFlow(); else stopBranchFlow();
 }
 
 function drawComponentBranches(layer, data, prefix) {
@@ -75,6 +119,12 @@ function drawTreeBranch(num1, data, prefix) {
   const x2 = end.left + end.width / 2 + window.scrollX;
   const y2 = end.top + end.height / 2 + window.scrollY;
   ctx.lineWidth = width;
+  // 流动动画：虚线沿连线推进（线宽 15 上的"光段"，观感像能量在连接上流动）。
+  // 关掉动画时用空虚线 = 原来的实线。
+  const flow = branchFlowOn();
+  ctx.setLineDash(flow ? branchDashArr() : []);
+  ctx.lineDashOffset = flow ? -branchPhase : 0;
+  drawnBranches++;
   ctx.beginPath();
   ctx.strokeStyle = color_id;
   ctx.moveTo(x1, y1);
@@ -84,6 +134,7 @@ function drawTreeBranch(num1, data, prefix) {
 
 RT.canvas = {
   resize: resizeCanvas,
+  stopFlow: stopBranchFlow,
   draw: drawTree,
   hasCanvas: function () { return !!document.getElementById('treeCanvas'); },
 };

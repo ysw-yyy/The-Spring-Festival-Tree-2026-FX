@@ -1517,3 +1517,21 @@ img {
 .achievement {
   padding-top: 0 !important;
 }
+/* ==========================================================================
+   I15. Tree branch lines must sit UNDER the content
+   --------------------------------------------------------------------------
+   #treeCanvas is a position:fixed, z-index:1 full-screen canvas. Because a
+   positioned element paints above non-positioned content, every branch stroke
+   was drawn ON TOP of the cards, the infobox and the text - measured: the canvas
+   covers the whole viewport (1600x900) and is pointer-events:none, which is why
+   hit-testing kept missing it.
+   The lines are correct; only their stacking was wrong. Raise the content above
+   the canvas so the strokes only show through the gaps between cards, the way
+   the original looks. (#treeOverlay stays at z-index 3, still above both.)
+   ========================================================================== */
+#treeTab,
+#tabContent,
+#rightContent {
+  position: relative;
+  z-index: 2;
+}
