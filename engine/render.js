@@ -465,6 +465,17 @@ RT.smoothNumbers = (function () {
         continue;
       }
       st.key = key;
+      // ★ 给"落后"设上限：目标一直在跑（真存档里点数每秒涨 1.26e18）而显示粒度是 1e16，
+      //   平滑层追不上就会**一直落后**（线上实测落后约 0.18 秒 ≈ 20 个显示步长）。
+      //   超过 maxLagSteps 就直接贴合 —— 既保证数字不撒谎，又保留小步长时的顺滑。
+      const stepLog = st.shape.exp ? (st.target.e - st.shape.dec) : (-st.shape.dec);
+      const lagSteps = Math.pow(10, logOf(st.target) - stepLog) - Math.pow(10, logOf(st.cur) - stepLog);
+      if (Math.abs(lagSteps) > (cfg.maxLagSteps === undefined ? 3 : cfg.maxLagSteps)) {
+        st.cur = { m: st.target.m, e: st.target.e };
+        st.key = key;
+        if (el.textContent !== st.text) { el.textContent = st.text; stats.snaps++; stats.lagSnaps++; }
+        continue;
+      }
       // 相对误差够小 → 精确贴回原文本（静止时与原版逐字一致）
       const rel = st.target.m !== 0 ? Math.abs(st.cur.m - st.target.m) / Math.abs(st.target.m) : Math.abs(st.cur.m);
       if (st.cur.e === st.target.e && rel <= cfg.settle) {
