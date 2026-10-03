@@ -29,7 +29,11 @@ RT.setConfig({
   challenge: { variant: 'sf' },
 
   // G5/G6：主循环把 diff 归一成原生 number
-  loop: { normalizeDiffToNumber: true },
+  // M11：主循环 **40Hz**（intervalMs 25）。这是实测出的性价比档：
+  //   数字可见变化 21 次/秒 → **42.5 次/秒**，而循环 JS 成本约 2 倍（temp.js ≈2% → ≈4%）；
+  //   60Hz 只能到 50 次/秒却要 3 倍成本 —— 已经撞上"显示粒度 ÷ 增长速度"这道墙。
+  //   URL 可覆盖：?hz=60 / ?hz=20 随时对比。音乐游戏树保持引擎默认 50ms，不替它改。
+  loop: { normalizeDiffToNumber: true, intervalMs: 25 },
 
   // M5/M6/G2/G8：时间全族用原生 number，现实时间字段叫 realTime
   time: {

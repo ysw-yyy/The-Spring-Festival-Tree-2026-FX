@@ -52,6 +52,8 @@ css/                深空极光风格 + 动效层（5 个文件；motion.css �
 | `ui.strings.*` | 英文 | 中文 | 文案串味 |
 | `layout.thingTreeVariant` | `'flex'` | `'table'` | 升级树整片错位 |
 | `ui.infoboxBodyAlwaysInDom` | `true` | `false` | 折叠框（剧情/说明）的正文是"展开才建、收起就删"（上游行为），**那样只能单向播动画**；开了这个开关正文常驻 DOM，配合 CSS 的 `grid-template-rows` 过渡才能双向伸缩。默认必须是 `false`——它改的是 DOM 结构，音乐游戏树没配对应样式，开了会让折叠框全部常开 |
+| `loop.intervalMs` | `25`（40Hz） | `50`（20Hz） | 界面数字的可见刷新率只有 21 次/秒。实测 40Hz → **37~42 次/秒**（循环 JS 成本约 2 倍），60Hz 只到 50 次/秒却要 3 倍成本——已撞上"显示粒度 ÷ 增长速度"这道墙。URL 可覆盖：`?hz=60` / `?hz=20`；音乐游戏树保持 50ms |
+| `ui.smoothNumbers` | `{enabled:true, extraDigits:0}` | `{enabled:false}` | 两次 tick 之间把实时读数滚到目标值（rAF，只写被标记的节点）。`extraDigits` 决定滚动时的小数位（0 = 与最终文本同形状，宽度不跳）；URL 可覆盖：`?smooth=0` 关 / `1~3` 多给几位小数 |
 
 ## 验收（都在无头 Edge 里实跑过）
 
