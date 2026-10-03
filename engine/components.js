@@ -142,7 +142,8 @@ RT.components = (function () {
       if (layers[layer].upgrades[data].effectDisplay) {
         content.push(h('span', {}, [
           h('br'),
-          text('当前效果: '),
+          // ⑤ 用户要求高亮"当前效果"这一行：标签包一层带类的 span，值用相邻兄弟选择器
+        h('span', { class: 'upgEffectLabel' }, [text('当前效果: ')]),
           h('span', { html: run(layers[layer].upgrades[data].effectDisplay, layers[layer].upgrades[data]) }),
         ]));
       }
@@ -614,10 +615,14 @@ RT.components = (function () {
     const value = data ? format(pts, data)
       : (layer == 'e' && player.e && player.e.points !== undefined ? format(player.e.points)
         : formatWhole(pts === undefined ? 0 : pts));
+    // ④ 配置里列出的层（例如 A / t，它们压根没有 resource）不显示"你有 N <资源>"。
+    //    ★ 注意只摘掉"你有 + 数字 + 资源名"这三段，**effectDescription 必须保留** ——
+    //    距离层（d）的"当前距离: …"就在那一段里（一开始我差点整块 return null 删掉它）。
+    const hideYouHave = (((RT.config.ui && RT.config.ui.hideResourceDisplay) || [])).indexOf(layer) >= 0;
     return h('div', {}, [
-      (pts === undefined || pts.lt('1e1000')) ? h('span', {}, [text('你有 ')]) : null,
-      h('h2', { style: { color: 'var(--points)' }, attrs: { 'data-sm': 'main' } }, [text(value)]),
-      text(' ' + str(t.resource)),
+      hideYouHave ? null : ((pts === undefined || pts.lt('1e1000')) ? h('span', {}, [text('你有 ')]) : null),
+      hideYouHave ? null : h('h2', { style: { color: 'var(--points)' }, attrs: { 'data-sm': 'main' } }, [text(value)]),
+      hideYouHave ? null : text(' ' + str(t.resource)),
       layers[layer].effectDescription
         ? h('span', {}, [text(', '), h('span', { html: run(layers[layer].effectDescription, layers[layer]) })])
         : null,
@@ -627,6 +632,9 @@ RT.components = (function () {
   }
 
   function resourceDisplay(layer) {
+    // ④ 配置里列出的层直接不渲染（例如 A / t 这种点击层，"你有 0"没有意义）。
+    const hidden = (RT.config.ui && RT.config.ui.hideResourceDisplay) || [];
+    if (hidden.indexOf(layer) >= 0) return null;
     const t = tmp[layer];
     const p = player[layer] || {};
     return h('div', { style: { 'margin-top': '-13px' } }, [
@@ -671,9 +679,15 @@ RT.components = (function () {
     //   undefined（渲染器自己会回落到第一个键，所以画面正常），但 active 判断若直接比
     //   undefined，就一个按钮都匹配不上 —— 表现是"当前标签没有任何高亮"（实测踩过）。
     const keys = Object.keys(data);
-    let current = (player[layer] && player[layer].subtabs)
-      ? player[layer].subtabs[family || 'mainTabs'] : undefined;
+    // ★ 读的必须是 setSubtab 写的那一处：player.subtabs[layer][family]。
+    //   这里曾经读的是 player[layer].subtabs[family]（层级内对象），和写入位置**不是同一个**，
+    //   于是永远读到 undefined、回落到 keys[0] —— 表现就是"切换子标签时高亮永远停在第一颗上，
+    //   后面的按钮亮度不变"（用户实拍反馈）。
+    let current = (player.subtabs && player.subtabs[layer])
+      ? player.subtabs[layer][family || 'mainTabs'] : undefined;
     if (current === undefined) current = keys[0];
+    // 容错：存档里那个值可能已经不可用（标签被锁/改名），此时同样回落到第一个
+    if (data[current] === undefined) current = keys[0];
     for (const tab in data) {
       const item = data[tab];
       if (!(item.unlocked == undefined || item.unlocked)) continue;

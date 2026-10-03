@@ -89,7 +89,9 @@ RT.setConfig({
     //（主循环 20Hz、而 3 位有效数字每秒只变约 1.6 次，所以原来看起来是一跳一跳的）
     smoothNumbers: { enabled: true, easing: 0.35, extraDigits: 0, settle: 1e-6 },
     // M12：思念层所有升级标题都含"思"字 —— 把它挑出来高亮（用户要的小巧思）
-    titleHighlightChars: '思',
+    titleHighlightChars: '思填充',
+    // ④ 按作者要求：A / t 层不显示"你有 N <资源>"那一行（点基层级上它没有意义）
+    hideResourceDisplay: ['A', 't'],
     // M13：按用户要求，设置页只保留前两行（保存/自动保存/硬重置、导出/导入/离线进度）
     hideOptionRows: [3, 4],
   },

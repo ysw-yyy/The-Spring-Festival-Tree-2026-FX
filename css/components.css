@@ -1439,3 +1439,41 @@ img {
 .story-text > span {
   text-align: left;
 }
+/* ==========================================================================
+   I12. Five small requests from the author
+   -------------------------------------------------------------------------- */
+
+/* ② 成就名字居中：原来靠左，视觉上参差不齐 */
+.achievement,
+.achievement h3,
+.achievement span {
+  text-align: center;
+}
+
+/* ⑤ 升级里的"当前效果"一行高亮。
+   标签由引擎包成 <span class="upgEffectLabel">，效果值紧跟其后（相邻兄弟），
+   所以两段可以用一条相邻选择器一起照亮。只用静态颜色 + 静态发光（不带动画），
+   避免踩"数值发光必须静态"那条红线。 */
+.upgEffectLabel,
+.upgEffectLabel + span {
+  color: color-mix(in srgb, var(--layer-color, #8fd8ff) 52%, #ffffff);
+  font-weight: 600;
+  text-shadow: 0 0 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 45%, transparent);
+}
+
+/* ③ 子标签：选中态原来几乎看不出亮度差（作者反馈"切了标签亮度没变化"）。
+   这里把对比拉开：选中 = 亮字 + 亮边 + 内高光；未选中 = 压暗。
+   如果引擎那边 active 判定本身有问题，这条不会凭空生效 —— 见 tabs 的检查。 */
+.tabButton {
+  opacity: 0.62;
+  filter: none;
+  transition: opacity 0.15s linear, border-color 0.15s linear, color 0.15s linear;
+}
+
+.tabButton.active {
+  opacity: 1;
+  color: #ffffff;
+  border-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 78%, #ffffff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 45%, transparent),
+              inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}

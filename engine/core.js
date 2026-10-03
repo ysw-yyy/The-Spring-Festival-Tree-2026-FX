@@ -142,6 +142,8 @@ RT.config = {
     // M13：设置页（options-tab）里要隐藏的**行号**（1 起，每行三个按钮）。
     // 空数组 = 全部显示（引擎默认）。春节树按用户要求只留前两行。
     hideOptionRows: [],
+    // ④ 这些层不渲染"你有 N <资源>"（内容层不变，只在渲染时跳过）
+    hideResourceDisplay: [],
   },
   layout: {
     thingTreeVariant: 'table',          // O-1：'table'（RG）| 'flex'（SF）
