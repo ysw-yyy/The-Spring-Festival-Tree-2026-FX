@@ -21,15 +21,15 @@ function prestigeButtonText(layer) {
     return (player[layer].points.lt(1e3)
       ? (t.resetDescription !== undefined ? t.resetDescription : uiStr('resetFor', '重置以获得 '))
       : '') +
-      `+<b>${formatWhole(t.resetGain)}</b> ${t.resource} ` +
+      `+<b>${formatWhole(t.resetGain)}</b> ${str(t.resource)} ` +
       (t.resetGain.lt(100) && player[layer].points.lt(1e3)
-        ? `<br><br>${uiStr('nextNeeds', '下一个需要')} ${t.roundUpCost ? formatWhole(t.nextAt) : format(t.nextAt)} ${t.baseResource}`
+        ? `<br><br>${uiStr('nextNeeds', '下一个需要')} ${t.roundUpCost ? formatWhole(t.nextAt) : format(t.nextAt)} ${str(t.baseResource)}`
         : '');
   }
   if (t.type == 'static') {
-    return `${t.resetDescription !== undefined ? t.resetDescription : uiStr('resetForShort', '重置以获得')}+<b>${formatWhole(t.resetGain)}</b> ${t.resource}<br><br>` +
+    return `${t.resetDescription !== undefined ? t.resetDescription : uiStr('resetForShort', '重置以获得')}+<b>${formatWhole(t.resetGain)}</b> ${str(t.resource)}<br><br>` +
       `${player[layer].points.lt(30) ? (t.baseAmount.gte(t.nextAt) && t.canBuyMax !== undefined && t.canBuyMax ? uiStr('nextAt', '下一个:') : uiStr('reqAt', '需要:')) : ''} ` +
-      `${formatWhole(t.baseAmount)} / ${t.roundUpCost ? formatWhole(t.nextAtDisp) : format(t.nextAtDisp)} ${t.baseResource}`;
+      `${formatWhole(t.baseAmount)} / ${t.roundUpCost ? formatWhole(t.nextAtDisp) : format(t.nextAtDisp)} ${str(t.baseResource)}`;
   }
   if (t.type == 'none') return '';
   // O-2：SF 在这里有一句兜底文案，RG 返回 undefined

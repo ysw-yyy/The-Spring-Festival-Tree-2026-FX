@@ -139,6 +139,14 @@ RT.setConfig = function (patch) {
 };
 
 // 语言无关的小工具（TMT 同名同语义）-----------------------------------
+// 插值成文本时把 undefined/null 变成空字符串 —— 与 Vue 的插值行为一致。
+// 不加这一步的后果：层没定义 `resource`/`baseResource` 时，界面上会直接出现
+// 字面量 "undefined"（原版 Vue 那里是空的）。实测：成就页顶部出现过
+// 「你有 0 undefined」。内容层确实有这种不定义 resource 的层（A / d / t）。
+function str(v) {
+  return (v === undefined || v === null) ? '' : String(v);
+}
+
 function isFunction(obj) {
   return !!(obj && obj.call && obj.apply);
 }

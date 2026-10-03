@@ -447,9 +447,9 @@ RT.components = (function () {
 
     const tooltipText = t.tooltip != '' ? (t.isLayer
       ? (unlocked
-        ? (t.tooltip ? t.tooltip : formatWhole(player[layer].points) + ' ' + t.resource)
-        : (t.tooltipLocked ? t.tooltipLocked : 'Reach ' + formatWhole(t.requires) + ' ' + t.baseResource +
-          ' to unlock (You have ' + formatWhole(t.baseAmount) + ' ' + t.baseResource + ')'))
+        ? (t.tooltip ? t.tooltip : formatWhole(player[layer].points) + ' ' + str(t.resource))
+        : (t.tooltipLocked ? t.tooltipLocked : 'Reach ' + formatWhole(t.requires) + ' ' + str(t.baseResource) +
+          ' to unlock (You have ' + formatWhole(t.baseAmount) + ' ' + str(t.baseResource) + ')'))
       : (t.canClick ? (t.tooltip ? t.tooltip : 'I am a button!') : (t.tooltipLocked ? t.tooltipLocked : 'I am a button!')))
       : null;
 
@@ -571,7 +571,7 @@ RT.components = (function () {
     return h('div', {}, [
       (pts === undefined || pts.lt('1e1000')) ? h('span', {}, [text('你有 ')]) : null,
       h('h2', { style: { color: 'var(--points)' } }, [text(value)]),
-      text(' ' + t.resource),
+      text(' ' + str(t.resource)),
       layers[layer].effectDescription
         ? h('span', {}, [text(', '), h('span', { html: run(layers[layer].effectDescription, layers[layer]) })])
         : null,
@@ -585,17 +585,17 @@ RT.components = (function () {
     const p = player[layer] || {};
     return h('div', { style: { 'margin-top': '-13px' } }, [
       t.baseAmount !== undefined && t.baseAmount !== null
-        ? h('span', {}, [h('br'), text('你有 ' + formatWhole(t.baseAmount) + ' ' + t.baseResource)])
+        ? h('span', {}, [h('br'), text('你有 ' + formatWhole(t.baseAmount) + ' ' + str(t.baseResource))])
         : null,
       t.passiveGeneration && t.resetGain
-        ? h('span', {}, [h('br'), text('你正在获得 ' + format(t.resetGain.times(t.passiveGeneration)) + ' ' + t.resource + ' 每秒')])
+        ? h('span', {}, [h('br'), text('你正在获得 ' + format(t.resetGain.times(t.passiveGeneration)) + ' ' + str(t.resource) + ' 每秒')])
         : null,
       h('br'),
       h('br'),
       (t.showBest && p.best !== undefined)
-        ? h('span', {}, [text('你的最佳 ' + t.resource + ' 是 ' + formatWhole(p.best)), h('br')]) : null,
+        ? h('span', {}, [text('你的最佳 ' + str(t.resource) + ' 是 ' + formatWhole(p.best)), h('br')]) : null,
       (t.showTotal && p.total !== undefined)
-        ? h('span', {}, [text('你总共有' + formatWhole(p.total) + ' ' + t.resource), h('br')]) : null,
+        ? h('span', {}, [text('你总共有' + formatWhole(p.total) + ' ' + str(t.resource)), h('br')]) : null,
     ]);
   }
 
