@@ -1767,3 +1767,54 @@ body.ds-glow .overlayThing {
   --ds-flow-speed: 5s;
   --ds-points-speed: 3.4s;
 }
+
+/* ---------------------------------------------------------------------------
+   10. 直角化：把大部分按钮的圆角去掉
+   ---------------------------------------------------------------------------
+   用户要求「大部分按钮改成直角」。游戏原本给按钮设了各种圆角
+   （`.upg` / `.buyable` / `.achievement` / `.challenge` / `.tile` 是 15~33%，
+   `.tabButton` 是 10px，`.treeNode` 是 50% 的圆形）。
+
+   **必须加 !important**：这些属性写在游戏自己的 CSS 里，而且游戏还会用
+   内联 style 给部分元素设圆角；用 !important 才能不依赖书写顺序稳定覆盖。
+
+   **刻意保留圆角的元素**（它们是「不是按钮」或「圆才是其形态」）：
+     .tooltip        悬停说明，是气泡不是按钮
+     .barBorder      能量条的凹槽
+     .longUpg        全圆（50%）的 respec 按钮，属刻意设计
+     .treeButton     树上的胶囊形文字节点
+   ------------------------------------------------------------------------ */
+body.ds-glow .upg,
+body.ds-glow .buyable,
+body.ds-glow .achievement,
+body.ds-glow .challenge,
+body.ds-glow .tile,
+body.ds-glow .upgBig,
+body.ds-glow .smallUpg,
+body.ds-glow .opt,
+body.ds-glow .reset,
+body.ds-glow .tabButton,
+body.ds-glow .treeNode {
+  border-radius: 0 !important;
+}
+
+/* 特效层自己的圆角也要跟着改，否则光晕/伪元素会比按钮多出一圈圆角 */
+body.ds-glow .upg::after,
+body.ds-glow .upg::before,
+body.ds-glow .buyable::after,
+body.ds-glow .buyable::before,
+body.ds-glow .achievement::after,
+body.ds-glow .achievement::before,
+body.ds-glow .challenge::after,
+body.ds-glow .challenge::before,
+body.ds-glow .tile::after,
+body.ds-glow .tile::before,
+body.ds-glow .treeNode::after,
+body.ds-glow .treeNode::before {
+  border-radius: 0 !important;
+}
+
+/* 成就底部那条金边原本带 1px 圆角，一并改直 */
+body.ds-glow .achievement.bought::before {
+  border-radius: 0 !important;
+}
