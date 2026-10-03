@@ -1477,3 +1477,37 @@ img {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 45%, transparent),
               inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
+
+/* ==========================================================================
+   I13. The real green block, and achievement vertical centring
+   --------------------------------------------------------------------------
+   Measured: the coloured square is NOT the <button class="story-title"> (that
+   one was already made transparent), it is the inner <span class="story-toggle">
+   with background rgb(62, 230, 208) at 21x21. Strip its paint, keep the glyph,
+   and centre the glyph in a small slot.
+   Also: achievements were centred horizontally but sat too low vertically, so
+   the card becomes a centring flex column.
+   ========================================================================== */
+.story-toggle {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  font-size: 15px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--layer-color, #8fd8ff) 74%, #ffffff);
+}
+
+.achievement {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
