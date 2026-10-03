@@ -1076,3 +1076,142 @@ img {
 *::-webkit-scrollbar-thumb:hover {
   background: var(--rt-glow-ring);
 }
+
+/* ==========================================================================
+   H. 层级主题色渗透（用户要求"加强层级 UI 与层级主题色的关系"）
+   --------------------------------------------------------------------------
+   引擎把本层颜色写成 `--layer-color`，挂在**层内容根**（.noBackground）与
+   左右两栏（#tabContent / #rightContent）上，所有后代都能继承。
+   于是下面每一处面都跟着层级色走 —— 切层时整套界面的色调会换。
+
+   设计约束（都照工作区里实测过的红线来）：
+     · 只用**静态颜色**：不加动画、不加滤镜、不动 box-shadow；
+     · 只用低透明度参与合成，保证深空底（#070b18）上的对比度；
+     · **绝不碰 `.fill`**（进度条填充）—— 各条的填充色由内容层内联给定，
+       曾经给通用 .fill 加渐变把每条自己的颜色冲掉过（笔记里有记录）。
+   ========================================================================== */
+:root {
+  /* 兜底：不在层内容里（例如全屏提示）也有个颜色可用 */
+  --layer-color: var(--aur-a);
+}
+
+/* ---- H1. 面板/卡片：边框取层级色，底纱上再叠一层极淡的层级色 ---- */
+.upg,
+.buyable,
+.milestone,
+.milestoneDone,
+.challenge,
+.achievement,
+.tile,
+.opt,
+.longUpg,
+.reset,
+.prestige-button,
+.infobox,
+.story {
+  border-color: color-mix(in srgb, var(--layer-color) 38%, var(--rt-line-strong));
+}
+
+.upg,
+.buyable,
+.milestoneDone,
+.challenge,
+.achievement,
+.tile,
+.opt,
+.longUpg,
+.reset,
+.prestige-button,
+.infobox {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--layer-color) 9%, transparent),
+                    color-mix(in srgb, var(--layer-color) 3%, transparent)),
+    linear-gradient(var(--rt-veil), var(--rt-veil));
+}
+
+/* 未解锁的保持"暗空槽"观感：层级色再淡一档，别让它看起来像能点 */
+.upg.locked,
+.buyable.locked,
+.challenge.locked,
+.achievement.locked,
+.milestone.locked {
+  border-color: color-mix(in srgb, var(--layer-color) 16%, var(--rt-line));
+  background-image: linear-gradient(var(--rt-veil-deep), var(--rt-veil-deep));
+}
+
+/* ---- H2. 卡片标题：偏向层级色，正文保持中性 ---- */
+.upg h3,
+.buyable h3,
+.milestone h3,
+.milestoneDone h3,
+.challenge h3,
+.achievement h3,
+.tile h3,
+.opt h3,
+.reset b,
+.prestige-button b {
+  color: color-mix(in srgb, var(--layer-color) 52%, var(--rt-ink));
+}
+
+/* 已达成/已购买的用层级色实一点，和未达成的拉开差距 */
+.milestoneDone h3,
+.upg.bought h3,
+.buyable.bought h3 {
+  color: color-mix(in srgb, var(--layer-color) 78%, #ffffff);
+}
+
+/* 里程碑左侧那道亮条本来用金色，这里跟着层级色走，一行之内就看出是哪一层 */
+.milestoneDone::before {
+  background-color: color-mix(in srgb, var(--layer-color) 70%, #ffffff);
+}
+
+/* ---- H3. 子标签：当前项用层级色，悬停也沾一点 ---- */
+.tabButton {
+  border-color: color-mix(in srgb, var(--layer-color) 30%, var(--rt-line-strong));
+}
+
+.tabButton:hover {
+  border-color: color-mix(in srgb, var(--layer-color) 55%, var(--rt-line-strong));
+}
+
+.tabButton.active {
+  border-color: color-mix(in srgb, var(--layer-color) 72%, #ffffff);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--layer-color) 22%, transparent),
+                    color-mix(in srgb, var(--layer-color) 8%, transparent)),
+    linear-gradient(var(--rt-veil-soft), var(--rt-veil-soft));
+}
+
+/* ---- H4. 进度条：只染**边框/底槽**，填充色一个字都不碰 ---- */
+.barBorder {
+  border-color: color-mix(in srgb, var(--layer-color) 34%, var(--rt-line-strong));
+}
+
+.barBG {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--layer-color) 10%, transparent),
+                    color-mix(in srgb, var(--layer-color) 4%, transparent));
+  border-color: color-mix(in srgb, var(--layer-color) 26%, var(--rt-line-strong));
+}
+
+/* ---- H5. 返回键 / 说明气泡 / 树节点：小地方也带上层级色 ---- */
+.back,
+.other-back {
+  border-color: color-mix(in srgb, var(--layer-color) 45%, var(--rt-line-strong));
+  color: color-mix(in srgb, var(--layer-color) 62%, var(--rt-ink));
+}
+
+.tooltip {
+  border-color: color-mix(in srgb, var(--layer-color) 50%, var(--rt-line-strong));
+}
+
+/* 树节点：节点自己的层级色（引擎在节点上也写了 --layer-color），
+   悬停/当前层时环会亮起来，一眼看出"这是哪一层的图标"。 */
+.treeNode {
+  border-color: color-mix(in srgb, var(--layer-color, var(--rt-line-strong)) 45%, var(--rt-line-strong));
+}
+
+.treeNode.can:hover,
+.treeNode.can:focus-visible {
+  border-color: color-mix(in srgb, var(--layer-color, var(--rt-line-strong)) 85%, #ffffff);
+}

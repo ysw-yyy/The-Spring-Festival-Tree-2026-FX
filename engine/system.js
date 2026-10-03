@@ -255,16 +255,22 @@ RT.system = (function () {
         attrs: { id: 'treeTab' },
       }, [
         h('br'), h('br'), h('br'), h('br'),
-        h('div', { attrs: { id: 'tabContent' } }, [RT.components.layerTab(leftLayer || 'none')]),
+        // 左栏也带上它自己那一层的颜色（层内容根会有，但栏级装饰要用）
+        h('div', {
+          attrs: { id: 'tabContent' },
+          style: { '--layer-color': (tmp[leftLayer] && tmp[leftLayer].color) || 'var(--aur-a)' },
+        }, [RT.components.layerTab(leftLayer || 'none')]),
       ]));
 
       if (rightShown) {
         kids.push(h('div', {
           class: 'col right tab',
           attrs: { id: 'rightTab' },
-          style: tmp[player.tab] && tmp[player.tab].tabFormat && !Array.isArray(tmp[player.tab].tabFormat)
-            ? {} : {},
-        }, [h('div', { attrs: { id: 'rightContent' } }, [RT.components.layerTab(player.tab, 'none', '50px')])]));
+          style: {},
+        }, [h('div', {
+          attrs: { id: 'rightContent' },
+          style: { '--layer-color': (tmp[player.tab] && tmp[player.tab].color) || 'var(--aur-a)' },
+        }, [RT.components.layerTab(player.tab, 'none', '50px')])]));
       }
     }
 

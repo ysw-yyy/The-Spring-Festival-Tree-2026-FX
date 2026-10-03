@@ -470,7 +470,9 @@ RT.components = (function () {
     return h('button', {
       class: classes.join(' '),
       attrs: { id: layer },
-      style: constructNodeStyle(layer),
+      // 节点自己的层级色：样式表用 var(--layer-color) 给它的环/边框上色，
+      // 于是树上每个图标都看得出是哪一层（悬停时更亮）。
+      style: [constructNodeStyle(layer), { '--layer-color': t.color || 'var(--aur-a)' }],
       data: { act: 'treeNode', layer: layer, prev: prev || '' },
     }, [
       h('span', {
@@ -691,7 +693,12 @@ RT.components = (function () {
     const t = tmp[layer];
     const mainTabs = (t.tabFormat && !Array.isArray(t.tabFormat)) ? player.subtabs[layer].mainTabs : undefined;
     const subtabStyle = mainTabs && t.tabFormat[mainTabs] ? t.tabFormat[mainTabs].style : null;
-    const rootStyle = [t.style ? t.style : {}, subtabStyle];
+    // ★ 层级主题色注入：把本层颜色写成 CSS 变量挂在层内容根上（所有后代继承）。
+    //   样式表里的面板/卡片/标签/进度条全部用 var(--layer-color) 取色，
+    //   于是切层时整套界面的色调跟着换。这是"层级色渗透"的唯一入口，
+    //   别在别处再写死颜色。
+    const rootStyle = [t.style ? t.style : {}, subtabStyle,
+      { '--layer-color': t.color || 'var(--aur-a)' }];
 
     const inner = [];
     if (back) {
