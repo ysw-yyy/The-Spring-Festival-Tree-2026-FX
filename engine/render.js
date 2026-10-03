@@ -162,7 +162,14 @@ RT.vdom = (function () {
         //（文本归 requestAnimationFrame 的平滑循环所有）。否则 20Hz 的渲染会把
         // 平滑层写的中间值冲掉，看起来每秒闪 20 次。
         const smHost = smoothHostOf(node);
-        if (smHost) { smHost.dataset.smTarget = vnode.text; return node; }
+        if (smHost) {
+          smHost.dataset.smTarget = vnode.text;
+          // ★ 必须通知平滑层立刻重扫元素列表：渲染器从这里起就**不再自己写文本**了，
+          //   若平滑层的列表里还没有这个元素（列表每 1.5 秒才重扫一次），文本就会
+          //   一直停在旧值（实测：刚打开页面时头部的点数是 0，之后永远显示 0.00 ✗）。
+          if (RT.smoothNumbers && RT.smoothNumbers.markDirty) RT.smoothNumbers.markDirty();
+          return node;
+        }
         if (node.data !== vnode.text) node.data = vnode.text;
         return node;
       }
@@ -382,6 +389,7 @@ RT.smoothNumbers = (function () {
   const state = new WeakMap();
   let rafId = null;
   let lastCollect = 0;
+  let dirty = false;   // 渲染器新写入了 data-sm-target → 下一帧立刻重扫元素列表
   let cache = [];
   const stats = { frames: 0, writes: 0, snaps: 0, elements: 0 };
 
@@ -435,7 +443,7 @@ RT.smoothNumbers = (function () {
     if (!cfg || !cfg.enabled) { stop(); return; }
     stats.frames++;
     if (document.hidden) return;                       // 后台不烧 CPU
-    if (now - lastCollect > 1500) { collect(); lastCollect = now; }
+    if (dirty || now - lastCollect > 500) { collect(); lastCollect = now; dirty = false; }
     for (let i = 0; i < cache.length; i++) {
       const el = cache[i];
       if (!el.isConnected) continue;
@@ -524,5 +532,6 @@ RT.smoothNumbers = (function () {
   }
   function stop() { if (rafId !== null) cancelAnimationFrame(rafId); rafId = null; }
 
-  return { start: start, stop: stop, stats: stats, collect: collect, parse: parse, shapeOf: shapeOf, format: format };
+  function markDirty() { dirty = true; }
+  return { start: start, stop: stop, stats: stats, collect: collect, parse: parse, shapeOf: shapeOf, format: format, markDirty: markDirty };
 })();
