@@ -1281,15 +1281,13 @@ img {
    On the dark achieved cards that reads as a stray horizontal line (user report).
    Turn it into a small layer-coloured dot: still signals "done", no longer a line.
    Note: .bought.notify::after (two classes) keeps its hatch - that rule is more specific. */
+/* I6b: user asked to drop the marker entirely ("删了吧"), so kill the pseudo-element.
+   `content: none` removes it no matter which rule created it (its original rule is
+   elsewhere in this file / base.css and is more specific in some combinations, e.g.
+   .bought.notify::after keeps its hatch decoration - that one is intentional). */
 .bought::after,
 .done::after,
 .canComplete::after {
-  width: 7px;
-  height: 7px;
-  top: 6px;
-  right: 6px;
-  bottom: auto;
-  left: auto;
-  border-radius: 50%;
-  background-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 72%, #ffffff);
+  content: none;
+  display: none;
 }
