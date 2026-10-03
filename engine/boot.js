@@ -133,18 +133,26 @@ RT.boot = async function () {
     startMainLoop();
     // M10：数字平滑显示（配置关着时 start() 自己会拒绝）。
     // 支持 URL 覆盖，方便直接在浏览器里对比观感与开销：
-    //   ?smooth=0 关  |  ?smooth=1 滚 +1 位小数  |  ?smooth=2 +2 位  |  ?smooth=3 +3 位（默认）
-    // 实测（无头 Edge，采样 4s；数值 7.6e20、每秒 +1.26e18）：
-    //   关        → 数字每秒变 1.5 次，(program) 4.3%
-    //   +3 位小数 → 每秒变 20 次，     (program) 约 11%
-    //   其中约 3.9pp 是"每帧重画文本"与**背景漂移**的叠加：把漂移停掉后是 7.6%。
+    //   ?smooth=0 关  |  ?smooth=1 滚 +1 位小数  |  ?smooth=2 +2 位  |  ?smooth=3 +3 位（默认 0）
+    //   ?hz=N      主循环频率（10~120，默认 20）—— 也就是"直接加大刷新率"
+    // 实测（真存档，数值钉在 1e18、增长约 5%/s，每组 4s）：
+    //   20Hz → 数字可见变化约 21 次/秒；40Hz → 约 42 次/秒；60Hz → 约 50 次/秒（撞上显示粒度墙）
+    //   主循环 JS 成本近似**正比于频率**（每 tick 都要 updateTemp + 整页渲染）：
+    //   20→60Hz 时 temp.js 约 2~3 倍。所以真要加，40Hz 通常比 60Hz 划算得多。
     try {
-      const q = /[?&]smooth=(\d+)/.exec(String((typeof location !== 'undefined' && location.search) || ''));
+      const qs = String((typeof location !== 'undefined' && location.search) || '');
+      const q = /[?&]smooth=(\d+)/.exec(qs);
       if (q) {
         const v = parseInt(q[1], 10);
         const cfg = RT.config.ui.smoothNumbers;
         if (v <= 0) cfg.enabled = false;
         else { cfg.enabled = true; cfg.extraDigits = v; }
+      }
+      const hz = /[?&]hz=(\d+)/.exec(qs);
+      if (hz) {
+        const v = Math.max(10, Math.min(120, parseInt(hz[1], 10)));
+        RT.config.loop.intervalMs = Math.round(1000 / v);
+        if (typeof interval !== 'undefined' && interval) { clearInterval(interval); startMainLoop(); }
       }
       RT.smoothNumbers.start();
     } catch (e) { RT.error('启动数字平滑失败: ' + e.message); }
