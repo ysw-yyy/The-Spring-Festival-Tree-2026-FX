@@ -1643,3 +1643,70 @@ button.upg.treeThing {
     inset 0 0 44px 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 15%, transparent);
   animation: rt-can-glow 2.1s ease-in-out infinite;
 }
+/* ==========================================================================
+   I20. Three follow-ups on the inset glow
+   --------------------------------------------------------------------------
+   (1) hover: brighter ring + tighter breathing, so a hovered card reads as
+       "focused". No animation-play-state pause - freezing mid-breath would snap
+       the opacity - instead the ring brightens and the cycle shortens.
+   (2) purchase flash: a ONE-SHOT animation on the freshly bought card. The
+       shadow template is static (animating box-shadow would break the workspace
+       perf rule); only opacity and scale move. It fires once because the vdom
+       patches the class onto an existing node, and CSS only restarts an
+       animation when the name changes - so a reset + rebuy correctly re-fires.
+   (3) clickables get the same inset treatment, but always in a COOL ice palette
+       so "an upgrade you can buy" and "a button you can press" stay tellable.
+   ========================================================================== */
+
+/* (1) hover boost for buyable upgrades */
+.upg.can:not(.bought):not(.locked):not([id^="clickable-"]):hover::before {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 92%, #ffffff),
+    inset 0 0 22px 5px color-mix(in srgb, var(--layer-color, #8fd8ff) 50%, transparent),
+    inset 0 0 54px 14px color-mix(in srgb, var(--layer-color, #8fd8ff) 24%, transparent);
+  animation-duration: 1.3s;
+}
+
+/* (2) one-shot purchase flash (static shadow template!) */
+.upg.bought::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--layer-color, #8fd8ff) 78%, #ffffff),
+    inset 0 0 30px 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 46%, transparent);
+  opacity: 0;
+  animation: rt-buy-flash 0.55s ease-out 1;
+}
+
+@keyframes rt-buy-flash {
+  0%   { opacity: 0; scale: 1; }
+  28%  { opacity: 1; scale: 1.03; }
+  100% { opacity: 0; scale: 1; }
+}
+
+/* (3) clickables: same inset glow, cool palette */
+.upg.can[id^="clickable-"]:not(.bought):not(.locked)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #7fd8ff 74%, #ffffff),
+    inset 0 0 18px 3px color-mix(in srgb, #7fd8ff 36%, transparent),
+    inset 0 0 44px 10px color-mix(in srgb, #7fd8ff 16%, transparent);
+  animation: rt-can-glow 2.1s ease-in-out infinite;
+}
+
+.upg.can[id^="clickable-"]:not(.bought):not(.locked):hover::before {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, #7fd8ff 95%, #ffffff),
+    inset 0 0 22px 5px color-mix(in srgb, #7fd8ff 52%, transparent),
+    inset 0 0 54px 14px color-mix(in srgb, #7fd8ff 26%, transparent);
+  animation-duration: 1.3s;
+}
