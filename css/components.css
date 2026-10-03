@@ -1375,3 +1375,50 @@ img {
   font-size: 11px;
   line-height: 1.25;
 }
+/* ==========================================================================
+   I10. Infobox collapse button: no colour block, just the symbol, centred
+   --------------------------------------------------------------------------
+   The engine renders the header as <button class="story-title"> with an INLINE
+   background-color of the layer colour (components.js infobox()), which painted
+   a solid coloured square around the -/+ glyph. The user asked for the block to
+   go, the symbol to stay, and the symbol centred.
+   An inline declaration can only be beaten by !important from a stylesheet, so
+   that is what this uses. Everything else (the title text next to it, the click
+   target, the collapse behaviour) is untouched.
+   ========================================================================== */
+.story-title {
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  /* IMPORTANT: the -/+ symbol AND the title text both live inside this button,
+     so the width must stay auto - pinning it to the symbol size wrapped the
+     title into a 22px box (caught by measuring the button rect: 22x22px). */
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  padding: 3px 8px;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+/* The symbol gets its own small centred slot where the coloured block used to be
+   (only if the engine renders it as an element; a bare text node simply inherits
+   the centring above). */
+.story-title > span:first-child,
+.story-title > b:first-child,
+.story-title > i:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  font-size: 15px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--layer-color, #8fd8ff) 78%, #ffffff);
+}
