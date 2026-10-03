@@ -772,3 +772,29 @@ body[data-split="1"] .overlayHead {
     font-size: 16px;
   }
 }
+
+/* ==========================================================================
+   I. 三处对齐修复（用户实拍红框）
+   -------------------------------------------------------------------------- */
+
+/* I1. 左上三个图标按钮改**横排**：它们原来是三个绝对定位、各自写死 top（6/58/104px）
+   竖着摞一列。改成同一 top、按各自宽度排 left（46 / 40 / 40，间隔 6px）。 */
+#optionWheel { top: 6px; left: 6px; }
+#info        { top: 6px; left: 58px; }
+#discord     { top: 6px; left: 104px; }
+
+/* I2. 头部横条上方那截空缺：引擎给头部的第一个子节点是一个 `<br>`（自身高 0，
+   但会占掉一整行，把"你有 X 航迹"压到 26~39px 处），加上 padding-top 就有了空白。
+   直接把**首个** br 隐掉、上内边距收紧，读数就贴到横条顶部。 */
+.overlayHead > br:first-child { display: none; }
+.overlayHead { padding-top: 2px; }
+
+/* I3. 侧栏三按钮：① D 比其他两个低 3px —— 因为 D 带 `.notify` 环，盒子高一档，
+   而容器是 align-items: center 把它居中错开了；改成顶对齐即齐平。
+   ② 横条下方到按钮那截空隙收紧（top 100→92、内边距 8→6）。 */
+#sideLayers,
+.sideLayers {
+  align-items: flex-start;
+  top: 92px;
+  padding: 6px;
+}
