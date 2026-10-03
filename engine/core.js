@@ -81,6 +81,7 @@ RT.config = {
     variant: 'rg',                      // M3：'rg' | 'sf'
   },
   loop: {
+    intervalMs: 50,                     // 主循环周期（20Hz）。调小 = 逻辑与界面都更快，但每 tick 的 updateTemp+整页渲染也按比例变多
     normalizeDiffToNumber: false,       // M4：SF 把 diff 归一成 number
   },
   time: {

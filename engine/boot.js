@@ -94,7 +94,7 @@ function startMainLoop() {
     } finally {
       ticking = false;
     }
-  }, 50);
+  }, (RT.config.loop && RT.config.loop.intervalMs) || 50);
 }
 
 function startAuxIntervals() {

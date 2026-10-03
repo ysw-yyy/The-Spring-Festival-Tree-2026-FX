@@ -444,9 +444,19 @@ RT.smoothNumbers = (function () {
       let st = state.get(el);
       if (!st) { st = { cur: parse(raw), target: parse(raw), text: raw, shape: shapeOf(raw) }; state.set(el, st); }
       if (raw !== st.text) {                            // 引擎刚写入了新的真值 → 换目标
+        const prevTarget = st.target;
         st.text = raw; st.shape = shapeOf(raw);
         const t = parse(raw);
-        if (t) st.target = t;
+        if (t) {
+          // 记下"这次 tick 目标跳了几个显示步长" —— 自适应落后上限要用它。
+          // 后期点数每 tick 可能跳好几个步长（真存档：每秒 1.26e18、粒度 1e16、20Hz → 每 tick 6 步）。
+          if (prevTarget) {
+            const sl = (t.e - (st.shape.dec || 0));
+            const jump = Math.pow(10, logOf(t) - sl) - Math.pow(10, logOf(prevTarget) - sl);
+            st.tickSteps = Math.abs(jump);
+          }
+          st.target = t;
+        }
       }
       if (!st.target || !st.cur || !st.shape) continue;
       // ★ 目标"跳变"就直接贴合，不要滚：
@@ -465,12 +475,18 @@ RT.smoothNumbers = (function () {
         continue;
       }
       st.key = key;
-      // ★ 给"落后"设上限：目标一直在跑（真存档里点数每秒涨 1.26e18）而显示粒度是 1e16，
-      //   平滑层追不上就会**一直落后**（线上实测落后约 0.18 秒 ≈ 20 个显示步长）。
-      //   超过 maxLagSteps 就直接贴合 —— 既保证数字不撒谎，又保留小步长时的顺滑。
+      // ★ 给"落后"设上限：目标一直在跑，平滑层追不上就会**一直落后**
+      //   （线上实测落后约 0.18 秒 ≈ 20 个显示步长，数字在撒谎）。
+      //   ★★ 但上限**不能写死**：后期点数每 tick 就跳好几个显示步长
+      //   （真存档：每秒 1.26e18、粒度 1e16、20Hz → 每 tick 6 步），
+      //   固定的 3 步会在这种"快增长"场景下每 tick 都触发贴合 —— 等于把平滑关掉了。
+      //   所以自适应：允许落后 = max(基础值, 上一次 tick 跳的步长 × 1.5)，
+      //   含义就是"显示最多差一个多 tick"，既顺滑又不撒谎。
+      const base = cfg.maxLagSteps === undefined ? 3 : cfg.maxLagSteps;
+      const allowed = Math.max(base, (st.tickSteps || 0) * 1.5);
       const stepLog = st.shape.exp ? (st.target.e - st.shape.dec) : (-st.shape.dec);
       const lagSteps = Math.pow(10, logOf(st.target) - stepLog) - Math.pow(10, logOf(st.cur) - stepLog);
-      if (Math.abs(lagSteps) > (cfg.maxLagSteps === undefined ? 3 : cfg.maxLagSteps)) {
+      if (Math.abs(lagSteps) > allowed) {
         st.cur = { m: st.target.m, e: st.target.e };
         st.key = key;
         if (el.textContent !== st.text) { el.textContent = st.text; stats.snaps++; stats.lagSnaps++; }
