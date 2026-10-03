@@ -535,3 +535,55 @@ RT.smoothNumbers = (function () {
   function markDirty() { dirty = true; }
   return { start: start, stop: stop, stats: stats, collect: collect, parse: parse, shapeOf: shapeOf, format: format, markDirty: markDirty };
 })();
+
+
+  /* ==========================================================================
+   * 购买闪光（边沿触发）
+   * --------------------------------------------------------------------------
+   * 闪光的动画**不能**直接挂在 .bought 上：游戏每 50ms 重渲染、切标签还会整片重建，
+   * 于是每次重渲染都当成"新元素"重播一次（用户实报"切换页面时升级的闪光会重播"）。
+   * 这里改成 JS 边沿触发：记录每个元素上一次的"已购买"状态，只在 false -> true 那一刻
+   * 临时加 .rt-just-bought，动画放完之后摘掉。首次见到的元素**不播**（避免进页面满屏闪）。
+   * ========================================================================== */
+  RT.boughtFlash = (function () {
+    var seen = new WeakMap();   // 元素 -> 上一次是否已购买
+    var timer = null;
+    var DURATION = 650;
+    var INTERVAL = 140;
+
+    function scan() {
+      if (typeof document === 'undefined') return 0;
+      if (document.hidden) return 0;
+      var nodes = document.querySelectorAll('.upg, .buyable');
+      var fired = 0;
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        var now = el.classList.contains('bought');
+        var before = seen.get(el);
+        seen.set(el, now);
+        if (before === undefined) continue;      // 首次见到：只记录，不播
+        if (before === false && now === true && !el.classList.contains('rt-just-bought')) {
+          el.classList.add('rt-just-bought');
+          (function (node) {
+            setTimeout(function () { node.classList.remove('rt-just-bought'); }, DURATION);
+          })(el);
+          fired++;
+        }
+      }
+      return fired;
+    }
+
+    function start() {
+      var cfg = (RT.config.ui || {});
+      if (cfg.boughtFlash === false) return false;
+      if (timer !== null) return false;
+      if (typeof setInterval !== 'function') return false;
+      scan();
+      timer = setInterval(scan, INTERVAL);
+      return true;
+    }
+
+    function stop() { if (timer !== null) { clearInterval(timer); timer = null; } }
+
+    return { start: start, stop: stop, scan: scan };
+  })();

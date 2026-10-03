@@ -172,6 +172,8 @@ RT.boot = async function () {
         if (typeof interval !== 'undefined' && interval) { clearInterval(interval); startMainLoop(); }
       }
       RT.smoothNumbers.start();
+  // 购买闪光：边沿触发，切页面/重渲染都不会重播
+  RT.boughtFlash.start();
     } catch (e) { RT.error('启动数字平滑失败: ' + e.message); }
     startAuxIntervals();
 

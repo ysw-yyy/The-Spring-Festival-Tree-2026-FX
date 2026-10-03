@@ -153,6 +153,8 @@ RT.config = {
     branchGlow: 11,         // ★ 光芯的辉光半径（px）——细线要显发光就靠它
     branchHalo: 3.4,        // 光晕层宽度 = 线宽 × 这个倍数（宽而淡，垫在光芯下）
     branchHaloAlpha: 0.22,  // 光晕层透明度
+    // 购买闪光（边沿触发）。关掉 = 不闪。
+    boughtFlash: true,
     branchDashSpeed: 1.6,   // 每帧推进的偏移量（30fps 下约 48px/秒）
   },
   layout: {

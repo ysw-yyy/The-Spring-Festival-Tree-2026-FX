@@ -1679,7 +1679,6 @@ button.upg.treeThing {
     inset 0 0 0 2px color-mix(in srgb, var(--layer-color, #8fd8ff) 78%, #ffffff),
     inset 0 0 30px 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 46%, transparent);
   opacity: 0;
-  animation: rt-buy-flash 0.55s ease-out 1;
 }
 
 @keyframes rt-buy-flash {
@@ -1756,7 +1755,6 @@ button.upg.treeThing {
     inset 0 0 0 2px color-mix(in srgb, var(--layer-color, #8fd8ff) 78%, #ffffff),
     inset 0 0 30px 10px color-mix(in srgb, var(--layer-color, #8fd8ff) 46%, transparent);
   opacity: 0;
-  animation: rt-buy-flash 0.55s ease-out 1;
 }
 
 /* (b) click-to-fill 按钮：撤掉 I20 的冷色内嵌光 */
@@ -1782,4 +1780,16 @@ button.upg.treeThing {
 .upg.locked.bought {
   border-style: solid !important;
   border-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 55%, var(--rt-line)) !important;
+}
+
+/* ==========================================================================
+   I23. 购买闪光只由边沿触发
+   --------------------------------------------------------------------------
+   上面 .bought::before 现在只是一个"静态模板 + opacity:0"，不再自带 animation：
+   自带的话，游戏每次重渲染、每次切标签都会重播一次（用户实报的正是这个）。
+   真正的一闪由引擎的 RT.boughtFlash 扫描器在 false -> true 那一刻临时加类触发。
+   ========================================================================== */
+.upg.bought.rt-just-bought::before,
+.buyable.bought.rt-just-bought::before {
+  animation: rt-buy-flash 0.55s ease-out 1;
 }
