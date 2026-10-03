@@ -1,0 +1,110 @@
+{
+  "engine": "rtree",
+  "mod": {
+    "id": "HappyNewYear2026",
+    "name": "2026春节树",
+    "version": "2026"
+  },
+  "modFile": "mod.js",
+  "modSource": "js/mod.js",
+  "files": [
+    {
+      "order": 0,
+      "file": "layers/00-preamble-layers.js",
+      "layer": null
+    },
+    {
+      "order": 1,
+      "file": "layers/01-d.js",
+      "layer": "d"
+    },
+    {
+      "order": 2,
+      "file": "layers/02-h.js",
+      "layer": "h"
+    },
+    {
+      "order": 3,
+      "file": "layers/03-a.js",
+      "layer": "a"
+    },
+    {
+      "order": 4,
+      "file": "layers/04-p.js",
+      "layer": "p"
+    },
+    {
+      "order": 5,
+      "file": "layers/05-P.js",
+      "layer": "P"
+    },
+    {
+      "order": 6,
+      "file": "layers/06-y.js",
+      "layer": "y"
+    },
+    {
+      "order": 7,
+      "file": "layers/07-n.js",
+      "layer": "n"
+    },
+    {
+      "order": 8,
+      "file": "layers/08-e.js",
+      "layer": "e"
+    },
+    {
+      "order": 9,
+      "file": "layers/09-w.js",
+      "layer": "w"
+    },
+    {
+      "order": 10,
+      "file": "layers/10-Y.js",
+      "layer": "Y"
+    },
+    {
+      "order": 11,
+      "file": "layers/11-E.js",
+      "layer": "E"
+    },
+    {
+      "order": 12,
+      "file": "layers/12-At.js",
+      "layer": "At"
+    },
+    {
+      "order": 13,
+      "file": "layers/13-R.js",
+      "layer": "R"
+    },
+    {
+      "order": 14,
+      "file": "layers/14-t.js",
+      "layer": "t"
+    },
+    {
+      "order": 15,
+      "file": "layers/15-A.js",
+      "layer": "A"
+    }
+  ],
+  "tailFiles": [
+    "layers/tree.js"
+  ],
+  "sourceBytes": {
+    "js/layers.js": 321708,
+    "js/tree.js": 427,
+    "js/mod.js": 18306
+  },
+  "split": {
+    "split": [
+      "js/layers.js"
+    ],
+    "verbatim": [
+      "js/tree.js"
+    ],
+    "subdir": "layers"
+  },
+  "configFile": "engine-config.js"
+}

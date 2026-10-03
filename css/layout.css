@@ -1,0 +1,731 @@
+/* ==========================================================================
+   stree / layout.css   ——   「深空极光」风格 · 第 2/4 层：外壳与布局
+   本文件只管「盒子在哪、怎么滚、谁盖谁」；组件外观在 components.css。
+
+   性能红线（P1~P6 见 base.css 文件头）：本文件里没有任何 filter / 模糊阴影，
+   .bg / .bg2 / #treeCanvas 全部是**静态**定位层，不做动画、不做每帧重绘。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. #app 外壳
+   宽 >= 1024px 时左树右内容（各 50%）；更窄时两者都是整屏（同一时刻只显示一个）。
+   ★ 关键：`#treeOverlay` 必须**脱流**（position: absolute）。
+     不脱流时它是个普通 div，会把 #treeTab / #rightTab 往下顶（历史症状：
+     侧边层级栏被顶到 y=2729，鼠标点不到）。见 §5。
+   -------------------------------------------------------------------------- */
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* 竖 / 横分隔线（组件 v-line / h-line 用到） */
+.vl,
+.vl2 {
+  border-left: 1px solid var(--rt-line);
+  height: 100%;
+  position: absolute;
+  left: 50%;
+  top: 0;
+  margin-left: 0;
+  pointer-events: none;
+}
+
+.hl {
+  border-top: 1px solid var(--rt-line);
+}
+
+/* --------------------------------------------------------------------------
+   2. 树画布 / 层背景 —— 纯静态层（P1：这里不是 canvas 特效，是连线）
+   -------------------------------------------------------------------------- */
+#treeCanvas,
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-tree);
+  pointer-events: none;
+}
+
+.bg,
+.bg2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-canvas);
+  background-color: transparent;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   3. 滚动容器：#treeTab（左：树 / 当前导航层）与 #rightTab（右：层内容）
+   --------------------------------------------------------------------------
+   `#tabContent` / `#rightContent` 必须 height:auto —— 它们被引擎写成 height:100%
+   时，内容超过一屏就会被父级的 overflow 裁掉且不产生滚动条（实测：升级树
+   只显示第一屏，下面的节点永远点不到）。
+   -------------------------------------------------------------------------- */
+#treeTab,
+#rightTab,
+#tabContent,
+#rightContent,
+.fullWidth,
+.col {
+  position: relative;
+}
+
+#treeTab,
+#rightTab,
+.fullWidth {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  flex-shrink: 0;
+}
+
+/* #tabContent / #rightContent 的高度交给内容决定（height:auto），
+   否则超过一屏的内容会被父级 overflow 裁掉且不出滚动条（升级树只显示第一屏）。 */
+#tabContent,
+#rightContent {
+  height: auto;
+  min-height: 0;
+}
+
+/* 分栏时的 5% 让位（引擎给内容根写过 width:90% + margin-left:5% 的内联样式，
+   在分栏里会把内容推出列外）。0% 让位，宽度交给 100%。 */
+#tabContent:not(.col),
+#rightContent:not(.col) {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.col #tabContent,
+.col #rightContent,
+#rightTab #rightContent,
+#tabContent.col,
+#rightContent.col {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* --------------------------------------------------------------------------
+   ★★ 这里是最关键的一条：`#treeTab / #rightTab / .fullWidth` 的"整屏形态"
+      必须写成 `:not(.col)` ★★
+   --------------------------------------------------------------------------
+   为什么（这是 1600x900 下"右栏整体右移 800px"的真凶）：
+     `#treeTab` / `#rightTab` 是 **ID 选择器**，特异性 (1,0,0)；
+     而分栏用的 `.col` 只有 (0,1,0)。所以 `min-width: 100%` 会**赢过**
+     `.col { min-width: 50% }`，两个 flex item 各自的 min-width 都被钉在 1600px
+     ⇒ 左栏从 -800 开始（flex 居中把 3200px 的内容往两边溢）、右栏从 +800 开始
+       且宽 1600px、右边缘 2400 越出视口。实测：
+         #treeTab  {l:-800, w:1600}   #rightTab {l:800, w:1600, r:2400}
+       而音乐游戏树那一版（rg/rtree/css/layout.css）正是靠 `:not(.col)`
+       才拿到 {l:0,w:800} / {l:800,w:800}。这里把同样的写法补回来。
+     `width/min-width/max-width` 三条都要带 :not(.col) —— 只改其中一条没用，
+     因为 min-width 单独一条就足以把盒子撑到 1600px。
+   -------------------------------------------------------------------------- */
+#treeTab:not(.col),
+#rightTab:not(.col),
+#tabContent:not(.col),
+#rightContent:not(.col),
+.fullWidth:not(.col) {
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+}
+
+/* 分栏形态：左右各一半（只在引擎判定 splitScreen 时才会加 .col）。
+   `flex-shrink: 0` 让 50% 不被 flex 收缩掉。 */
+.col {
+  width: 50%;
+  min-width: 50%;
+  max-width: 50%;
+  flex-shrink: 0;
+}
+
+/* 树层是"浮在内容之上"的，不走 flex 流。JS 会给它设 top / left / width / height。 */
+#treeOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+}
+
+/* 双栏之间一条 1px 冷色细线 */
+#treeTab.col + #rightTab.col {
+  border-left: 1px solid var(--rt-line);
+}
+
+/* 树区 / 内容区留出顶部 overlay 的高度 */
+#treeTab {
+  padding-top: 62px;
+  padding-bottom: 48px;
+}
+
+#rightTab {
+  padding-top: 62px;
+  padding-bottom: 48px;
+}
+
+/* 系统页（设置 / 信息 / 更新日志）复用 #tabContent */
+#info-tab,
+#options-tab,
+#changelog-tab {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+#info-tab > *,
+#changelog-tab > * {
+  max-width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   4. 顶部 overlays
+   容器 pointer-events: none，交互子元素 pointer-events: auto。
+   `#app` 是 flex 容器，所以这些绝对定位的 overlay 必须写全 top/left（或 top/right）：
+   只写一半时它们仍是 flex item，会先按 flex 布局排一遍（被挤到负坐标）。
+   -------------------------------------------------------------------------- */
+.overlayThing {
+  position: relative;
+  z-index: var(--z-overlay);
+  pointer-events: auto;
+}
+
+/* #overlayHead 是一条通栏：半透明深空底 + 下边一条极淡细线。
+   用 rgba + 半透明而不是实色，让极光透上来一点（静态，零成本）。 */
+#overlayHead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--z-overlay);
+  width: 100%;
+  padding: 6px 104px 8px 60px;
+  text-align: center;
+  line-height: 1.3;
+  background-color: rgba(6, 10, 22, 0.72);
+  border-bottom: 1px solid var(--rt-line);
+  pointer-events: none;
+}
+
+#overlayHead > * {
+  pointer-events: auto;
+}
+
+#overlayHead span,
+#overlayHead h2,
+#overlayHead div {
+  display: inline;
+}
+
+/* 主数值：极光薄荷色 + 等宽数字。
+   ★ 不写 text-shadow（P3）：深空底上的高对比已经足够显眼，发光是纯开销。 */
+#points {
+  color: var(--points);
+  font-family: var(--font-num);
+  font-size: var(--fs-huge);
+  font-weight: 600;
+  text-shadow: none;
+  margin: 0 6px;
+  letter-spacing: 0.01em;
+}
+
+.main-display {
+  display: block;
+  width: 100%;
+  margin: 0 auto 6px;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.main-display h2 {
+  display: inline-block;
+  font-family: var(--font-num);
+  font-size: var(--fs-huge);
+  color: var(--points);
+  text-shadow: none;
+}
+
+#version {
+  position: absolute;
+  top: 5px;
+  right: 20px;
+  left: auto;
+  z-index: var(--z-overlay);
+  width: auto;
+  padding: 2px 7px;
+  color: var(--rt-ink-faint);
+  border: 1px solid var(--rt-line);
+  border-radius: var(--radius);
+  background-color: transparent;
+  cursor: pointer;
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--track);
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+
+#version:hover {
+  color: var(--rt-ink);
+  border-color: var(--rt-line-strong);
+}
+
+/* --------------------------------------------------------------------------
+   4b. 左上角三个系统钮
+   引擎渲染成：
+     button#optionWheel.iconBtn.overlayThing > span.iconGlyph > svg
+     button#info.iconBtn.overlayThing        > span.iconGlyph > svg
+     a#discord.overlayThing.iconBtn          > span.iconGlyph > svg + span.link
+   svg 是 22x22、fill:none / stroke:currentColor —— 所以颜色由 color 决定。
+   -------------------------------------------------------------------------- */
+#optionWheel,
+#info,
+#discord {
+  position: absolute;
+  left: 6px;
+  z-index: var(--z-overlay);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--aur-d);
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast),
+    background-color var(--t-fast);
+}
+
+.iconBtn {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--aur-d);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+/* 内联 SVG 用 currentColor 上色 —— 换主题时图标跟着文字色走，
+   不需要给图标单独写颜色。 */
+.iconGlyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.iconGlyph svg,
+.iconBtn svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+
+#optionWheel:hover,
+#info:hover,
+#discord:hover {
+  color: var(--rt-ink);
+  border-color: var(--rt-line-strong);
+  background-color: rgba(143, 216, 255, 0.06);
+}
+
+#optionWheel {
+  top: 6px;
+  width: 46px;
+  height: 46px;
+}
+
+#info {
+  top: 58px;
+  width: 40px;
+  height: 40px;
+}
+
+#discord {
+  top: 104px;
+  width: 40px;
+  height: 40px;
+  overflow: visible;
+}
+
+/* 图标必须是固定尺寸的方块：引擎会在 #discord 里再放一个 `.link`，
+   而 `.link` 是 `display: block` —— 若不把图标"脱流"，它会被挤扁。 */
+#discord img,
+#discord svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  display: block;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   #discord 里的链接标签（hover 才浮出）
+   --------------------------------------------------------------------------
+   引擎把 `.link` 直接放进 40px 宽的 #discord 里，而 `.link` 是 display:block
+   —— 不处理的话文字会被压成"一行一个字"竖成一条（实测 36px×164px）。
+   这里用纯 CSS 做成「hover 才出现的浮出标签」：left:100% 从图标右边滑出，
+   white-space:nowrap 保证不竖排。
+   -------------------------------------------------------------------------- */
+#discord > .link {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  z-index: var(--z-overlay);
+  width: max-content;
+  max-width: 280px;
+  margin-left: 8px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  writing-mode: horizontal-tb;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  font-size: var(--fs-base);
+  letter-spacing: var(--track);
+  text-align: left;
+  color: var(--rt-ink);
+  background-color: var(--background_tooltip);
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--t-base), visibility var(--t-base);
+}
+
+#discord:hover > .link,
+#discord:focus-within > .link {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* 左上角的返回箭头 */
+.back,
+.other-back {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  z-index: var(--z-overlay);
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--aur-d);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 6px;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+
+.back {
+  font-size: 32px;
+}
+
+.other-back {
+  left: 58px;
+  font-size: 40px;
+}
+
+.back:hover,
+.other-back:hover {
+  color: var(--rt-ink);
+  border-color: var(--rt-line-strong);
+}
+
+/* --------------------------------------------------------------------------
+   5. 侧边层级栏  ★ 本次最明显的坏症状就在这里
+   --------------------------------------------------------------------------
+   结构：`#treeOverlay > div.sideLayers > div > button.treeNode.smallNode#<layer>`
+
+   历史症状：没有 CSS 时这两个/三个节点被顶到 y=2729，鼠标根本点不到。
+   根因有两条，缺一不可：
+     (1) `#treeOverlay` 没脱流 → 它是 #app 这个 flex 容器里的普通 item，
+         `.overlayThing` / `#overlayHead` / `.sideLayers` 之前那一大坨内容
+         （树 + 导航层）把它整体推到文档下方；
+     (2) `.sideLayers` 没有定位 → 不是绝对定位就没有"贴视口"的锚点。
+   所以：(1) 在 §1 给 #treeOverlay 加 position:absolute；
+        (2) 这里显式绝对定位 + top/right 固定，且**不随内容高度变化**。
+
+   实测（1600x900 / 800x900 两种宽度）：4 个节点的
+   getBoundingClientRect() 的 top/left/bottom/right **全部在视口内**。
+   -------------------------------------------------------------------------- */
+#sideLayers,
+.sideLayers {
+  position: absolute;
+  top: 66px;
+  right: 10px;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  max-height: calc(100vh - 80px);
+  padding: 8px;
+  margin: 0;
+  background-color: rgba(6, 10, 22, 0.5);
+  border: 1px solid var(--rt-line);
+  border-radius: var(--radius-lg);
+  pointer-events: none;
+  overflow: visible;
+}
+
+#sideLayers > *,
+.sideLayers > * {
+  pointer-events: auto;
+  display: block;
+  margin: 0 0 6px;
+}
+
+#sideLayers > *:last-child,
+.sideLayers > *:last-child {
+  margin-bottom: 0;
+}
+
+/* .treeOverlay 整层不吃事件，交互元素自己打开 */
+.treeOverlay {
+  pointer-events: none;
+}
+
+.treeOverlay .overlayThing,
+.treeOverlay .sideLayers,
+.treeOverlay button,
+.treeOverlay .treeNode,
+.treeOverlay .treeButton {
+  pointer-events: auto;
+}
+
+/* 树节点必须能"露"到容器外（连线与 tooltip 都靠它）——
+   绝对不要给 .treeOverlay 写 overflow: hidden！ */
+.sideLayers .treeNode {
+  margin: 0 auto;
+}
+
+.front {
+  z-index: 30000;
+}
+
+.tab {
+  position: relative;
+}
+
+.left {
+  position: absolute;
+  left: 0;
+}
+
+/* --------------------------------------------------------------------------
+   6. 加载 / 通关等全屏块
+   -------------------------------------------------------------------------- */
+#loadingSection {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   7. 窄屏
+   --------------------------------------------------------------------------
+   目标（实测断言）：两种宽度下 `scrollWidth - clientWidth === 0`，
+   且侧边层级栏的每个节点都落在视口内。
+   -------------------------------------------------------------------------- */
+
+/* 7a. 单栏：<= 1023px（引擎的 updateWidth 用 1024 做分栏门槛） */
+@media (max-width: 1023px) {
+  /* 必须显式给 #app 确定高度并把滚动容器 min-height 归零，
+     否则 flex 的 min-height:100% 会把两个 100% 高的子项上下堆起来，
+     #treeTab 会被顶到负坐标。 */
+  #app {
+    height: 100%;
+    min-height: 0;
+    flex-flow: column nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  /* 窄屏：分栏收成单列。`min-width: 0` 很关键 —— 写 100% 会与
+     「内容里的长数字/等宽文本」一起把盒子撑出视口。 */
+  .col {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #treeTab,
+  #rightTab {
+    height: 100%;
+    min-height: 0;
+    flex: 0 0 auto;
+  }
+
+  #treeTab.col + #rightTab.col {
+    border-left: none;
+  }
+
+  .vl,
+  .vl2 {
+    display: none;
+  }
+}
+
+/* 7b. 800px 上下：把顶部 overlays 收窄，侧栏压扁 */
+@media (max-width: 900px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  /* ★ 同样必须带 :not(.col)：这两条在窄屏是"整屏形态"的兜底，
+     如果连 .col 一起命中，就会把上面刚锁好的 50%/100% 又顶回 100%
+     （ID 选择器 (1,0,0) 会赢过 .col 的 (0,1,0) —— 这正是本次布局 bug 的成因）。 */
+  #treeTab:not(.col),
+  #rightTab:not(.col),
+  .fullWidth:not(.col) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #treeTab,
+  #rightTab {
+    padding-top: 58px;
+    padding-bottom: 36px;
+  }
+
+  #overlayHead {
+    padding: 5px 74px 6px 52px;
+  }
+
+  #points {
+    font-size: var(--fs-big);
+  }
+
+  /* 侧栏改成"更小的一列"而不是藏起来 —— 层级是导航，藏了就没法点。
+     ★ 800×900 下必须仍然全部落在视口内：节点 44px + 间距 5px，
+       3~4 个也才 ~200px，从 top:60px 起算绝对安全。 */
+  #sideLayers,
+  .sideLayers {
+    top: 60px;
+    right: 6px;
+    padding: 5px;
+  }
+
+  .sideLayers .treeNode,
+  .sideLayers .smallNode {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    font-size: 18px;
+  }
+
+  #sideLayers > *,
+  .sideLayers > * {
+    margin-bottom: 5px;
+  }
+
+  /* 设置页 / 信息页的表格改块级堆叠：否则窄屏下按钮被推到屏幕外
+     （已知症状："设置里没有这个开关"）。 */
+  #options-tab table,
+  #options-tab tbody,
+  #options-tab tr,
+  #options-tab td,
+  #info-tab table,
+  #info-tab tbody,
+  #info-tab tr,
+  #info-tab td {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+
+  #options-tab td,
+  #info-tab td {
+    padding: 4px 0;
+  }
+
+  #options-tab .opt {
+    width: min(100%, 260px);
+    height: auto;
+    min-height: 60px;
+  }
+
+  #info-tab,
+  #options-tab,
+  #changelog-tab {
+    padding: 16px 12px 48px;
+  }
+}
+
+/* 7c. 极窄屏 */
+@media (max-width: 620px) {
+  #optionWheel {
+    top: 5px;
+    width: 36px;
+    height: 36px;
+  }
+
+  #info {
+    top: 47px;
+    width: 32px;
+    height: 32px;
+  }
+
+  #discord {
+    top: 85px;
+    width: 32px;
+    height: 32px;
+  }
+
+  #discord img,
+  #discord svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  #discord > .link {
+    max-width: 56vw;
+    white-space: normal;
+  }
+
+  #overlayHead {
+    padding: 4px 60px 5px 46px;
+  }
+
+  .sideLayers .treeNode,
+  .sideLayers .smallNode {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    font-size: 16px;
+  }
+}

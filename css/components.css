@@ -1,0 +1,983 @@
+/* ==========================================================================
+   stree / components.css   ——   「深空极光」风格 · 第 3/4 层：组件
+   升级 · 可购买 · 可点击 · 里程碑 · 挑战 · 成就 · 方块 · 按钮
+   进度条 · 树节点 · 标签按钮 · 剧情框 · tooltip · 网格
+
+   本文件的四条铁律：
+   1) 层底色是**内联**的 background-color，绝不 !important 覆盖；
+      统一用「薄纱」`linear-gradient(var(--rt-veil), var(--rt-veil))` 压成
+      淡色晕。深纱偏暗（alpha 0.88）—— 对比度证据见 base.css §1c。
+   2) 没有 filter / 模糊阴影 / text-shadow（P2/P3）。
+      质感靠「1px 冷色描边 + 内侧一条亮边（inset box-shadow，静态）」表达。
+      ★ 所有 box-shadow 都是**静态**的，并且挂在**不参与过渡**的属性上；
+        交互反馈改的是 border-color / color / background-color（P6）。
+   3) 三种状态靠形状 + 亮度区分，不只靠颜色：
+      可购买 = 亮描边 + 内侧亮边 + 可用文字色
+      锁定   = 极暗描边 + 更暗的空槽薄纱 + faint 文字色
+      已完成 = 亮面板 + 深字（浅底），右上角一个小圆点
+   4) 动画只允许 opacity（rt-breathe），绝不碰 box-shadow / filter。
+      全站只有 1 个关键帧、只有 1 类元素带它（`.notify::after`）。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. 薄纱速记：所有会被内联层色影响、且上面要放字的盒子都叠它
+   -------------------------------------------------------------------------- */
+.upg,
+.upgBig,
+.buyable,
+.tile,
+.achievement,
+.smallUpg,
+.opt,
+.challenge,
+.reset,
+.prestige-button,
+.longUpg,
+.treeNode,
+.treeButton,
+.story-title {
+  background-image: linear-gradient(var(--rt-veil), var(--rt-veil));
+}
+
+/* 已完成元素的文字要抬到亮面板之上。
+   `.bought::before` 是 z-index:1 的面板，内容默认在它下面。
+   **只对 .bought 生效**，不影响 .notify 的装饰（那在 ::after 上）。 */
+.bought > *,
+.done > *,
+.canComplete > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ==========================================================================
+   A0. 状态形状的显式重声明
+   --------------------------------------------------------------------------
+   组件规则用 `border: 1px solid` 简写定过边框，会盖掉 base.css 里
+   `.locked` 的形状；这里对每个组件显式重声明，不依赖书写顺序。
+   ========================================================================== */
+.upg.locked,
+.upgBig.locked,
+.buyable.locked,
+.tile.locked,
+.smallUpg.locked,
+.opt.locked,
+.achievement.locked,
+.treeNode.locked,
+.treeButton.locked,
+.challenge.locked,
+.reset.locked,
+.prestige-button.locked {
+  border-style: dashed;
+  border-color: var(--rt-line);
+  box-shadow: none;
+}
+
+.bought,
+.done,
+.canComplete {
+  border-style: solid;
+}
+
+/* 反相状态必须赢过组件自己的文字色（同特异性时靠后写赢） */
+.bought.bought,
+.done.done,
+.canComplete.canComplete,
+.milestoneDone.milestoneDone {
+  color: var(--rt-invert-fg);
+}
+
+/* ==========================================================================
+   A. 升级 / 可购买 / 可点击 / 方块
+   ========================================================================== */
+.upg,
+.upgBig,
+.buyable,
+.tile,
+.smallUpg {
+  position: relative;
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  /* 静态质感：内侧一条亮边 + 底部一道极淡的暗边（零模糊、零动画） */
+  box-shadow: inset 0 0 0 1px var(--rt-rim),
+    inset 0 -14px 0 -12px rgba(0, 0, 0, 0.28);
+  color: var(--rt-ink);
+  background-clip: padding-box;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  font-size: var(--fs-small);
+  text-shadow: none;
+  filter: none;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+
+/* 可购买：描边点亮成极光青 —— 这是本风格的"可交互"主信号 */
+.upg.can,
+.upgBig.can,
+.buyable.can,
+.tile.can,
+.smallUpg.can {
+  border-color: var(--rt-glow-ring);
+}
+
+.upg.can:hover,
+.upgBig.can:hover,
+.buyable.can:hover,
+.tile.can:hover,
+.smallUpg.can:hover {
+  border-color: var(--aur-a);
+  color: var(--rt-ink);
+}
+
+.upg {
+  width: 124px;
+  min-height: 124px;
+  padding: 6px;
+}
+
+.upgBig {
+  width: 200px;
+  min-height: 200px;
+  padding: 8px;
+  font-size: var(--fs-base);
+}
+
+.buyable {
+  width: 200px;
+  height: 200px;
+  padding: 8px;
+}
+
+.tile {
+  width: 84px;
+  height: 84px;
+  padding: 4px;
+  font-size: var(--fs-tiny);
+}
+
+.smallUpg {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: var(--fs-tiny);
+}
+
+/* 未解锁：暗空槽。底纱换成更深的一档，"还没点亮"一眼可见。 */
+.upg.locked,
+.upgBig.locked,
+.buyable.locked,
+.tile.locked,
+.achievement.locked {
+  background-image: linear-gradient(var(--rt-veil-deep), var(--rt-veil-deep));
+  color: var(--rt-ink-faint);
+}
+
+/* 可点击按钮（clickable）：结构上就是 .upg，加一圈内嵌细框做区分 */
+.clickable {
+  box-shadow: inset 0 0 0 1px var(--rt-rim),
+    inset 0 0 0 2px rgba(143, 216, 255, 0.12);
+}
+
+/* --------------------------------------------------------------------------
+   A2. ★ 春节树的「升级树」是 flex 变体（不是音乐游戏树的 table 变体）
+   --------------------------------------------------------------------------
+   引擎 RT.config.layout.thingTreeVariant === 'flex' 时，DOM 是：
+
+     div                                   ← thingTree 根
+       div.upgRow[style="margin-bottom:50px"]   ← 一行
+         span.upgAlign[style="width:0;height:0"]  ← 0×0 的"占位锚"
+           button.upg.treeThing                   ← 真正的节点
+
+   ★ 关键：那个 0×0 的 .upgAlign 是**故意** 0×0 的（音乐游戏树用它当
+   table 里的占位锚）。在 flex 变体里，若树节点还是 `position: absolute`
+   或 0×0 容器里的脱流内容，**同一行的所有按钮会全部堆在同一个坐标上**
+   （实测：n 层 14 行升级树整片叠成一坨）。
+   解法只有一条：让 `.treeThing` **参与常规流**（position: relative），
+   它的 100~124px 尺寸就会把 0×0 的父 span 撑开（overflow 可见，不裁），
+   于是 .upgRow 的 `justify-content: center` 能正常把它们横向排开。
+   -------------------------------------------------------------------------- */
+/* ★★ 升级树为什么必须 `align-items: normal(≈stretch)` 而不是 center ★★
+   --------------------------------------------------------------------------
+   这是「22 个升级节点挤成一坨」的**第二个**、也是决定性的成因。
+   引擎的 flex 变体结构是：
+
+     div.upgTable(instant)                 ← display:flex; column wrap
+       div.upgCol                          ← display:flex; column wrap
+         div                               ← 引擎 thingTree 返回的裸 wrapper
+           div.upgRow[style="margin-bottom:50px"]
+             span.upgAlign[style="width:0;height:0"]   ← 0x0 锚
+               button.upg.treeThing                    ← 真正的 124px 节点
+
+   `align-items: center` 会让 `div.upgCol` 里的裸 wrapper 变成
+   **shrink-to-fit** 宽度 —— 实测它只有 **16px**（= 两个 0 宽锚的 8px gap ×2）。
+   于是 `.upgRow` 也只有 16px 宽，`justify-content: center` 在这 16px 里
+   把两个 0 宽锚排在相差 8px 的位置，里面 124px 宽的按钮就整片叠上了
+   （实测：22 个节点只剩 5 个不同中心 x、106 对重叠）。
+   改成 stretch（normal）后，裸 wrapper 撑满 640px、`.upgRow` 撑满整行，
+   0 宽锚才真正被 `justify-content: center` + 8px gap 横向排开。
+   —— 这两条（本段 + 上面 .upgAlign 的宽度）**必须同时成立**，少一条都还是叠的。 */
+.upgTable {
+  display: flex;
+  flex-flow: column wrap;
+  align-items: normal;
+  justify-content: flex-start;
+  gap: var(--gap);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* 行内元素：居中对齐 + 顶部对齐（同行的树节点高度可能不同，
+   用 center 会把它们的中心对齐、看起来一高一低）。 */
+.upgRow {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--gap);
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.upgCol {
+  display: flex;
+  flex-flow: column wrap;
+  align-items: normal;
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ★★ 0x0 的占位锚 `.upgAlign` 用 `display: contents` ★★
+   --------------------------------------------------------------------------
+   引擎在升级树里给它内联写了 `width: 0px; height: 0px; margin: 0 7px;`。
+   内联样式优先级最高、又不能用 !important，所以**从盒子本身下手是唯一出路**：
+   `display: contents` 会把它的盒子彻底移除，里面的 `.treeThing` 于是
+   **直接成为 `.upgRow` 的 flex item**，于是：
+     · 那两个内联的 0 宽 / 0 高不再有任何几何影响；
+     · 行高由按钮自己撑出来；
+     · `justify-content: center` + 8px gap 在**整行 799px** 上分配，
+       同一行 2~3 个节点被真正横向排开。
+
+   踩过的两个中间态（不要再改回去）：
+     · `display: block` / `display: flex` + `width: auto` —— 内联 `width: 0`
+       会赢，锚仍是 0 宽，`justify-content: center` 把它们挤在行中央
+       （实测同行 3 个锚的中心 x 只差 4~8px，而按钮是 124px 宽）。
+     · 只改 `.upgAlign` 不改 `.upgTable/.upgCol` 的 `align-items` ——
+       裸 wrapper 会被 shrink-to-fit 成 **16px**，`justify-content` 只在 16px
+       里分配，同样叠。实测 22 个节点只剩 5 个不同中心 x、**106 对重叠**。
+   两条都到位后实测：22 个节点 22 个不同中心 x、**0 对重叠**。 */
+.upgAlign,
+.bigUpgAlign {
+  display: contents;
+  vertical-align: 0;
+}
+
+/* 升级树 / 可购买树 / 可点击树里的节点：
+   参与常规流（见上面 A2 的说明）+ 上下留出连线需要的余量。 */
+.treeThing {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 10px;
+  z-index: 1;
+}
+
+.treeThing.can:hover {
+  z-index: 3;
+}
+
+/* 通用行 / 列容器（组件名 row / column） */
+.row {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.column {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* 升级区外层（组件 upgrades / buyables / clickables / achievements 的容器） */
+.upgrades {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  text-align: center;
+}
+
+/* 长按钮（卖出 / respec 之类） */
+.longUpg {
+  display: inline-flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  height: 42px;
+  padding: 4px 16px;
+  background-color: var(--rt-panel);
+  color: var(--rt-ink);
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px var(--rt-rim);
+  font-size: var(--fs-base);
+  letter-spacing: var(--track);
+  cursor: pointer;
+}
+
+.longUpg.can {
+  border-color: var(--rt-glow-ring);
+}
+
+.longUpg.can:hover {
+  border-color: var(--aur-a);
+}
+
+.longUpg.locked,
+.longUpg:disabled {
+  background-color: transparent;
+  color: var(--rt-ink-faint);
+  border-style: dashed;
+  border-color: var(--rt-line);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* 声望（转生）按钮：组件名 prestige-button，输出 .reset 盒子。
+   高度必须自适应（文案由内容层拼，长数字会换行）。
+
+   ★ `margin-left/right: auto` 不能省：它的父容器 `.upgCol` 是
+   `display:flex; align-items:normal`，而定宽（200px）的 flex 子项**不会**被
+   `text-align:center` 居中（text-align 对 flex 子项无效），会被放在交叉轴起点——
+   实测中心比栏中心偏左 **300px**。auto 外边距会吸收交叉轴剩余空间，正好把它居中；
+   也不能改用 `align-items:center`，因为升级树不叠成一坨恰恰依赖 `normal`（stretch）。 */
+.reset,
+.prestige-button {
+  position: relative;
+  display: inline-flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 200px;
+  margin-left: auto;
+  margin-right: auto;
+  height: auto;
+  min-height: 108px;
+  padding: 10px 8px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px var(--rt-rim);
+  color: var(--rt-ink);
+  background-clip: padding-box;
+  font-size: var(--fs-base);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.reset.can,
+.prestige-button.can {
+  border-color: var(--rt-glow-ring);
+}
+
+.reset.can:hover,
+.prestige-button.can:hover {
+  border-color: var(--aur-a);
+}
+
+.reset.locked,
+.prestige-button.locked {
+  color: var(--rt-ink-faint);
+}
+
+/* ==========================================================================
+   B. 成就 / 挑战
+   ========================================================================== */
+.achievement {
+  position: relative;
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 96px;
+  height: 96px;
+  padding: 4px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px var(--rt-rim);
+  color: var(--rt-ink);
+  background-clip: padding-box;
+  font-size: var(--fs-tiny);
+  line-height: 1.15;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-shadow: none;
+}
+
+.achievement.can:hover {
+  border-color: var(--aur-a);
+}
+
+/* 已获得成就：亮面板 + 深字 + 一圈金色描边（"小奖牌"感）。
+   金色是暖色，在整片冷色里只有"成就"用，识别度最高。 */
+.achievement.bought {
+  border-color: rgba(255, 196, 110, 0.72);
+  background-image: none;
+}
+
+.achievement.locked {
+  border-color: var(--rt-line);
+}
+
+.challenge {
+  position: relative;
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 300px;
+  max-width: 100%;
+  height: 300px;
+  padding: 14px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px var(--rt-rim);
+  color: var(--rt-ink);
+  background-clip: padding-box;
+  font-size: var(--fs-base);
+  line-height: 1.3;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-shadow: none;
+}
+
+.challenge.canComplete {
+  border-color: var(--aur-a);
+}
+
+.challenge.done {
+  border-color: rgba(255, 196, 110, 0.6);
+}
+
+/* ==========================================================================
+   C. 里程碑（整行，75px 高）
+   未达成 = 暗空槽（更深的薄纱）；已达成 = 亮面板 + 深字 + 左侧一道亮条。
+   ========================================================================== */
+.milestone,
+.milestoneDone {
+  position: relative;
+  width: 100%;
+  min-width: 140px;
+  height: 75px;
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
+  text-align: center;
+  overflow-wrap: anywhere;
+  text-shadow: none;
+  background-clip: padding-box;
+}
+
+.milestone {
+  border: 1px dashed var(--rt-line);
+  background-image: linear-gradient(var(--rt-veil-soft), var(--rt-veil-soft));
+  color: var(--rt-ink-faint);
+  box-shadow: none;
+}
+
+.milestoneDone {
+  border: 1px solid rgba(255, 196, 110, 0.55);
+  background-color: var(--rt-invert-bg);
+  background-image: none;
+  color: var(--rt-invert-fg);
+  box-shadow: inset 0 0 0 1px rgba(6, 21, 36, 0.1);
+}
+
+.milestoneDone::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background-color: #b8791f;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  pointer-events: none;
+}
+
+.milestone h3,
+.milestoneDone h3 {
+  display: block;
+  color: inherit;
+}
+
+/* ==========================================================================
+   D. 进度条
+   结构：div[position:relative] > div[display:table] > .overlayTextContainer.barBorder
+        与 .barBG.barBorder > .fill
+   ★ 铁律（本仓库实测）：条子上不许有任何随进度改变可见范围的**方向性**渐变，
+     也不许给整条尺寸的伪元素加动画（clip-path + 双层 overflow 下无法提合成层，
+     每帧重光栅化整条）。这里 .fill 只有静态的垂直高光，零动画。
+   ========================================================================== */
+.barBase {
+  display: table;
+  overflow: hidden;
+  width: 100%;
+}
+
+.bar {
+  display: block;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.barBorder {
+  position: relative;
+  width: 100%;
+  height: var(--bar-h);
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 0;
+  box-shadow: none;
+}
+
+.overlayTextContainer {
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--bar-h);
+  border-radius: var(--radius);
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+.overlayText {
+  position: relative;
+  z-index: 6;
+  color: var(--rt-ink);
+  text-shadow: none;
+  font-family: var(--font-num);
+  font-size: var(--fs-small);
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 0 8px;
+  pointer-events: none;
+}
+
+.barBG {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--bar-h);
+  z-index: 1;
+  background-color: var(--rt-panel-2);
+  /* 底槽一层极淡的斜纹，读比例更容易。是**静态**的，不动 background-position。 */
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--rt-line) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+/* .fill 的颜色由内容层**内联**写（各条 bar 不同），所以这里绝不写 background-color，
+   也绝不写 background-image —— 只叠一个与横向位置无关的垂直高光。
+   ★ 不要给它加任何 animation。 */
+.fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  z-index: 2;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 3px 0 rgba(255, 255, 255, 0.3);
+  transition: none;
+}
+
+.barRow {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.bars {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ==========================================================================
+   E. 标签按钮（子标签 / 主标签）
+   极光风：胶囊形，选中的靠颜色而不是位移；notify 走静态斜纹 + 呼吸。
+   ========================================================================== */
+.tabButton {
+  position: relative;
+  background-color: rgba(143, 216, 255, 0.04);
+  background-image: none;
+  color: var(--rt-ink-soft);
+  font-size: var(--fs-base);
+  letter-spacing: var(--track);
+  cursor: pointer;
+  padding: 6px 18px;
+  margin: 4px;
+  border: 1px solid var(--rt-line);
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.tabButton:hover {
+  color: var(--rt-ink);
+  border-color: var(--rt-line-strong);
+  background-color: rgba(143, 216, 255, 0.08);
+}
+
+.tabButton.locked {
+  border-style: dashed;
+  color: var(--rt-ink-faint);
+  cursor: not-allowed;
+}
+
+.tabButton.notify {
+  border-color: var(--rt-glow-ring);
+  color: var(--rt-ink);
+}
+
+.tabButton.resetNotify {
+  border-color: var(--rt-ring-warm);
+}
+
+/* ==========================================================================
+   F. 树节点 / 树按钮 / 节点标记
+   极光风：矩形胶囊 + 一圈亮描边；层色被深纱压成冷色晕，
+   所以"这是哪一层"主要靠 nodeLabel 与描边亮度，不靠底色亮度。
+   ★ 形状偏好：树节点保留圆角（尺寸小、数量多，圆角比方角更好点）。
+   ========================================================================== */
+.treeNode,
+.treeButton {
+  position: relative;
+  /* ★ 必须是**内联级**的 `inline-flex`，不能写 `flex`。
+     树的节点是被塞进 `display:inline` 的 <span> 单元格里的（引擎按上游模板生成
+     `<span class="upgRow"><table><span>节点</span>…`）。块级的 flex 容器嵌在内联盒里
+     会触发「块级盒子切分内联盒」，Blink 于是把每个 span 拆成**独立的匿名表格行** ——
+     实测同一行的 h/a 会竖排（h@748,140 / a@748,244、表格 124×312），
+     而原版是并排（h@690,136 / a@810,136、表格 244×160，因为上游是 inline-block）。
+     `inline-flex` 既是内联级（不切分）又能保留 flex 居中。 */
+  display: inline-flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px var(--rt-rim);
+  font-size: 38px;
+  line-height: 1;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  color: var(--rt-ink);
+  text-shadow: none;
+  filter: none;
+  padding: 0;
+  margin: 0 10px;
+  overflow: visible;
+  background-clip: padding-box;
+  transition: border-color var(--t-fast), color var(--t-fast);
+  z-index: 2;
+}
+
+.treeNode.can,
+.treeButton.can {
+  border-color: var(--rt-glow-ring-ice);
+}
+
+.treeNode.can:hover,
+.treeButton.can:hover {
+  border-color: var(--aur-a);
+}
+
+.treeButton {
+  width: auto;
+  min-width: 88px;
+  height: 72px;
+  padding: 0 14px;
+  font-size: var(--fs-base);
+  letter-spacing: var(--track);
+}
+
+.smallNode {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  font-size: 22px;
+  margin: 0 auto;
+}
+
+.nodeLabel {
+  font: inherit;
+  font-family: inherit;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* 层未解锁：虚线 + 无内侧亮边（与可点的实线形成明确对比） */
+.treeNode.locked,
+.treeButton.locked {
+  border-style: dashed;
+  border-color: var(--rt-line);
+  box-shadow: none;
+  color: var(--rt-ink-faint);
+  filter: none;
+  opacity: 1;
+}
+
+/* 节点标记（星星 / 图片）：绝对定位 */
+.node-mark,
+.star,
+.mark {
+  position: absolute;
+  z-index: 20;
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  font-size: var(--fs-tiny);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.star {
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 50%;
+  background-color: var(--aur-a);
+  filter: none;
+}
+
+.star::before,
+.star::after {
+  content: none;
+}
+
+.mark {
+  object-fit: contain;
+}
+
+/* ==========================================================================
+   G. 剧情框（infobox / story）
+   引擎把标题的背景色**内联**成层色，所以标题也要靠薄纱压（见 §0 的清单）。
+   ========================================================================== */
+.story {
+  position: relative;
+  width: 640px;
+  max-width: 95%;
+  margin: 0 auto 12px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  text-align: left;
+  background-color: var(--rt-panel-2);
+  overflow: hidden;
+}
+
+.story-title {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: var(--fs-big);
+  color: var(--rt-ink);
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid var(--rt-line);
+  border-radius: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+  letter-spacing: var(--track);
+  transition: background-color var(--t-fast);
+}
+
+.story-title:hover {
+  background-color: rgba(143, 216, 255, 0.07);
+}
+
+.story-toggle {
+  display: inline-block;
+  width: 1.3em;
+  margin-right: 8px;
+  background-color: var(--aur-a);
+  color: #06121a;
+  border: none;
+  border-radius: 3px;
+  font-size: 16px;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+}
+
+.story-text {
+  padding: 10px;
+  border: none;
+  color: var(--rt-ink-soft);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================================================
+   H. tooltip
+   默认透明；.tooltipBox:hover > .tooltip 与 .forceTooltip > .tooltip 显示。
+   ★ 只认**直接子元素**，避免把孙子 tooltip 也点着。
+   ========================================================================== */
+.tooltipBox {
+  position: relative;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  z-index: var(--z-tooltip);
+  width: var(--tooltip-w);
+  max-width: 62vw;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  transform: translateX(-50%);
+  background-color: var(--background_tooltip);
+  color: var(--rt-ink);
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--t-base), visibility var(--t-base);
+}
+
+.tooltipBox:hover > .tooltip,
+.tooltipBox:focus-within > .tooltip,
+.forceTooltip > .tooltip,
+.forceTooltip:hover > .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 极窄屏：tooltip 不能捅出屏幕 */
+@media (max-width: 620px) {
+  .tooltip {
+    width: min(var(--tooltip-w), 74vw);
+    left: 0;
+    transform: none;
+    margin-left: 0;
+  }
+}
+
+/* ==========================================================================
+   I. 其它零散类
+   ========================================================================== */
+.respecCheckbox {
+  display: inline-block;
+}
+
+.remove {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius);
+}
+
+.remove:hover {
+  border-color: var(--aur-a);
+}
+
+/* 设置页按钮 */
+.opt {
+  display: inline-flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: center;
+  width: 116px;
+  height: 96px;
+  padding: 8px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px var(--rt-rim);
+  color: var(--rt-ink);
+  background-clip: padding-box;
+  font-size: var(--fs-small);
+  letter-spacing: var(--track);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.opt:hover {
+  border-color: var(--aur-a);
+  color: var(--rt-ink);
+}
+
+/* 内容层的图片不应撑破布局 */
+img {
+  max-width: 100%;
+}
+
+/* 滚动条：一条冷色细线 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rt-line-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--rt-line-strong);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--rt-glow-ring);
+}

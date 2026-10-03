@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>2026 春节树</title>
+<link rel="stylesheet" type="text/css" href="css/base.css" />
+<link rel="stylesheet" type="text/css" href="css/layout.css" />
+<link rel="stylesheet" type="text/css" href="css/components.css" />
+<link rel="stylesheet" type="text/css" href="css/popup.css" />
+</head>
+<body>
+<!-- 2026春节树 2026 · 无 TMT / 无 Vue 重构版；本文件由 rg/tools/gen_index.py 生成 -->
+<div id="app"></div>
+
+<!-- 引擎：数值库（break_eternity，MIT）与自研引擎，顺序不可换 -->
+  <script src="vendor/break_eternity.js"></script>
+  <script src="engine/core.js"></script>
+  <script src="engine/format.js"></script>
+  <script src="engine/deflate.js"></script>
+  <script src="engine/codec.js"></script>
+  <script src="engine/layers.js"></script>
+  <script src="engine/temp.js"></script>
+  <script src="engine/api.js"></script>
+  <script src="engine/displays.js"></script>
+  <script src="engine/tabs.js"></script>
+  <script src="engine/render.js"></script>
+  <script src="engine/popups.js"></script>
+  <script src="engine/components.js"></script>
+  <script src="engine/system.js"></script>
+  <script src="engine/canvas.js"></script>
+  <script src="engine/options.js"></script>
+  <script src="engine/save.js"></script>
+  <script src="engine/boot.js"></script>
+
+<!-- 内容层：由 rg/tools/split_content.py 逐字节切分而来（见 content/manifest.json），顺序不可换 -->
+  <script src="content/mod.js"></script>
+  <script src="content/engine-config.js"></script>
+  <script src="content/layers/00-preamble-layers.js"></script>
+  <script src="content/layers/01-d.js"></script>
+  <script src="content/layers/02-h.js"></script>
+  <script src="content/layers/03-a.js"></script>
+  <script src="content/layers/04-p.js"></script>
+  <script src="content/layers/05-P.js"></script>
+  <script src="content/layers/06-y.js"></script>
+  <script src="content/layers/07-n.js"></script>
+  <script src="content/layers/08-e.js"></script>
+  <script src="content/layers/09-w.js"></script>
+  <script src="content/layers/10-Y.js"></script>
+  <script src="content/layers/11-E.js"></script>
+  <script src="content/layers/12-At.js"></script>
+  <script src="content/layers/13-R.js"></script>
+  <script src="content/layers/14-t.js"></script>
+  <script src="content/layers/15-A.js"></script>
+  <script src="content/layers/tree.js"></script>
+
+<script>
+  // 启动（内容层全部解析完之后）
+  RT.boot();
+</script>
+</body>
+</html>

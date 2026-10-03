@@ -1,0 +1,166 @@
+/* ==========================================================================
+   stree / popup.css   ——   「深空极光」风格 · 第 4/4 层：弹窗
+   .popup-container 右下角堆叠 · .popup 的类型样式 · 淡入淡出
+
+   ★ 关键约束（本仓库踩过的坑，务必保留）：
+   淡出必须由 **transition** 完成（引擎会加 .fade-leave-active / .fade-leave-to），
+   绝不能给 .popup 写 `animation` + `animation-fill-mode: both` ——
+   both 会在动画结束后把 opacity 永久钉在 1，transition 再也改不动它，
+   表现就是「弹窗瞬间消失、没有淡出」。本文件里**一个 animation 都没有**。
+
+   性能：弹窗是"低频、小面积"的，0.25s 的 opacity/transform 过渡完全可以接受；
+   这里同样没有 filter / 模糊阴影 / text-shadow（P2/P3）。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 容器：右下角堆叠，从下往上长
+   父容器不吃指针事件，弹窗自己吃。
+   -------------------------------------------------------------------------- */
+.popup-container {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: var(--z-popup);
+  display: flex;
+  flex-flow: column-reverse nowrap;
+  align-items: flex-end;
+  gap: 10px;
+  width: 320px;
+  max-width: calc(100vw - 28px);
+  pointer-events: none;
+}
+
+.popup-container > * {
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+   2. 弹窗本体
+   极光风：半透明深空底 + 1px 冷色描边 + 左上角一道"极光色条"。
+   -------------------------------------------------------------------------- */
+.popup {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 64px;
+  padding: 12px 16px 12px 24px;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--background_tooltip);
+  background-image: none;
+  color: var(--rt-ink);
+  text-align: center;
+  overflow-wrap: anywhere;
+  box-shadow: inset 0 0 0 1px var(--rt-rim);
+  cursor: pointer;
+  pointer-events: auto;
+  text-shadow: none;
+  transition: opacity 0.25s linear, transform 0.25s linear,
+    border-color var(--t-fast);
+}
+
+/* 左侧色条：三种类型各一条**线型**，色盲也能分辨（不只靠颜色） */
+.popup::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 7px;
+  height: 100%;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  background-color: var(--aur-a);
+  pointer-events: none;
+}
+
+.popup h3 {
+  display: block;
+  color: inherit;
+  margin: 0 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rt-line);
+  letter-spacing: var(--track);
+}
+
+.popup h2 {
+  display: block;
+  color: inherit;
+  font-size: var(--fs-mid);
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.popup:hover {
+  border-color: var(--aur-d);
+}
+
+/* 类型差异：色条线型 / 颜色不同（实心青绿 / 金 / 斜纹紫 / 细灰） */
+.achievement-popup::before {
+  background-color: rgba(255, 196, 110, 0.95);
+}
+
+.challenge-popup::before {
+  background-color: var(--aur-c);
+}
+
+.milestone-popup::before {
+  background-image: repeating-linear-gradient(
+    0deg,
+    var(--aur-a) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+.default-popup {
+  background-color: var(--rt-panel-2);
+}
+
+.default-popup::before {
+  width: 4px;
+  background-color: var(--rt-line-strong);
+}
+
+/* --------------------------------------------------------------------------
+   3. 淡入 / 淡出（transition，不是 animation）
+   引擎侧：进入时挂 .fade-enter / .fade-enter-active，
+           离开时挂 .fade-leave-active / .fade-leave-to。
+   这里只动 opacity 与一点点位移，不做 fill-mode。
+   -------------------------------------------------------------------------- */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s linear, transform 0.25s linear;
+}
+
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-transition {
+  transition: opacity 0.25s linear;
+}
+
+/* 入场：从下方滑入并淡入（同样只由 transition 承担） */
+.popup.fade-enter {
+  transform: translateY(12px);
+}
+
+/* --------------------------------------------------------------------------
+   4. 窄屏：贴着两边、整宽堆叠
+   -------------------------------------------------------------------------- */
+@media (max-width: 620px) {
+  .popup-container {
+    right: 10px;
+    left: 10px;
+    bottom: 10px;
+    width: auto;
+    max-width: none;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .popup {
+    padding: 10px 12px 10px 20px;
+  }
+}

@@ -1,0 +1,727 @@
+/* ==========================================================================
+   stree / base.css   ——   「深空极光」风格 · 第 1/4 层：底座
+   ---------------------------------------------------------------------------
+   设计语言：深空底（--background #070b18）+ 静态极光带 + 星点，冷色科技感。
+   本文件管：主题令牌、派生 token、reset、排版、通用状态类、极光底。
+
+   ─────────────────────────────────────────────────────────────────────────
+   ★★ 性能红线（本风格的全部取舍都服从这几条，逐条都在下面的注释里标注）★★
+   ─────────────────────────────────────────────────────────────────────────
+   P1  不做整屏 canvas、不做每帧重绘。极光 = **纯静态 CSS 渐变**。
+       依据：本仓库历史实测，整屏 canvas 的每帧合成占浏览器 (program) 的
+       30~45 个百分点，是第一大头；而本文件一行 canvas / 一行 JS 都没有。
+   P2  禁止 filter: blur()（整屏高斯模糊每帧重跑）。柔化一律用多段柔和径向渐变。
+   P3  不动画 box-shadow / filter / text-shadow。
+   P4  装饰层**最多一层**可动，且只用 transform / opacity，
+       并显式 will-change: transform 让它进合成层；能不动就不动。
+       本风格的决定：**极光层完全静态**（0 个装饰动画），连那一层都不做。
+   P5  星点 / 网格一律静态 background-image（radial-gradient 点阵），
+       不动画 background-position、不铺满整屏的重复位图。
+   P6  只给交互元素写 transition，且 <= 0.15s；绝不写
+       `* { transition-duration: ... }`（那是原版的性能坑）。
+   P7  层底色是内容层**内联**的 background-color，绝不用 !important 覆盖，
+       统一用「薄纱」压成一抹淡色晕。薄纱走**偏暗**（不是偏亮）—— 见 §1c 的
+       对比度证据：这个模组的正文是浅色 #dff3ff，浅纱会让它掉到 1.0:1。
+
+   ─────────────────────────────────────────────────────────────────────────
+   ★★ 与上一套（Rizline 几何风）最本质的两处不同 ★★
+   ─────────────────────────────────────────────────────────────────────────
+   1) 上一套是「纸白底 + 墨字」，所以薄纱走**偏亮**（白纱 76%），反相面用墨色。
+      这一套是「深空底 + 浅字」，薄纱必须走**偏暗**。用上一套的浅纱会怎样，
+      是算过的：正文 #dff3ff 叠白纱后最差对比度 **1.00:1**（等于全盲）。
+      见 §1c。
+   2) 反相 token（--rt-invert-face / -bg / -fg）在这一套里**刻意不派生自
+      --color**，而是固定成「亮面板 + 深字」。原因：本模组只有 default / aqua
+      两套主题，两套都是暗底浅字（--color 都是浅色）。若照搬上一套
+      `--rt-invert-bg: var(--color)`，已完成元素会变成「浅底 + 浅字」，
+      对比度 1.3:1。这里固定成浅面 + 深字，两个主题下都成立。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 设计令牌
+   -------------------------------------------------------------------------- */
+:root {
+  /* —— 主题色兜底（引擎会把真值写到 **body** 的行内 style 上，见 §1b）——
+     两套主题都是深底浅字；这里给 default 的值。 */
+  --background: #070b18;
+  --background_tooltip: rgba(6, 10, 24, 0.92);
+  --color: #dff3ff;
+  --points: #a9f0e6;
+  --locked: #6b7f96;
+
+  /* —— 高质量树开关（引擎写 --hqProperty1..3）——
+     那组值是 inset 模糊阴影 + `0 0 20px var(--background)` 外发光，
+     与「无发光、无模糊」直接冲突，本风格**刻意不消费**它们。 */
+  --hqProperty1: 2px solid;
+  --hqProperty2a: 0 0 0 rgba(0, 0, 0, 0);
+  --hqProperty2b: 0 0 0 rgba(0, 0, 0, 0);
+  --hqProperty3: none;
+
+  /* —— 极光调色板（本风格的"皮肤"，与主题变量无关）—— */
+  --aur-a: #3ee6d0;   /* 青绿  */
+  --aur-b: #6a8cff;   /* 靛蓝  */
+  --aur-c: #b47cff;   /* 紫    */
+  --aur-d: #8fd8ff;   /* 冰蓝  */
+
+  /* —— 星点 / 网格（静态点阵，颜色极淡）—— */
+  --star: rgba(214, 236, 255, 0.5);
+  --star-dim: rgba(214, 236, 255, 0.22);
+  --grid: rgba(140, 180, 220, 0.05);
+
+  /* --------------------------------------------------------------------
+     1c. 薄纱（压住内联层色的唯一手段）
+     --------------------------------------------------------------------
+     透明色本身走「深空底色同族的近黑」，不是纯黑：纯黑会把层色压成灰。
+     alpha = 0.88 —— 这个数是算出来的，不是拍的。
+
+     证据（rg/work/veil_math.py，对 19 个真实层色的 WCAG 对比度）：
+       深纱 alpha   正文 #dff3ff（default）最差   正文 #bfdfff（aqua）最差
+         0.70            2.72:1                        2.25:1
+         0.80            3.76:1                        3.11:1
+         0.84            4.47:1                        3.69:1
+         0.88            5.49:1                        4.54:1   ← 选定
+         0.90            6.19:1                        5.12:1
+     即：**alpha = 0.88 是让两个主题的最差对比度都过 WCAG AA 正文
+     （4.5:1）的最小值**。0.84 时 default 差一点点（4.47），0.88 才稳。
+
+     对照（同一脚本）：浅纱 0.62/0.70/0.76/0.86 最差是 1.02~1.20:1 ——
+     浅色正文叠浅纱等于看不见，所以「墨字/浅纱」在本模组里永远不是答案。
+
+     层色被压之后不是"消失"：最暗的 #8B3300 合成为 #3b1615，与底色
+     #070b18 对比度 1.23:1，仍有可辨的冷调色晕；亮层色则明显偏冷、偏暗。
+     区分度主要交给描边与文字（本风格的 2px 亮描边 + 浅字），不靠底色的亮度。
+     -------------------------------------------------------------------- */
+  --rt-veil: rgba(7, 11, 24, 0.88);
+  --rt-veil-soft: rgba(7, 11, 24, 0.70);   /* 次要表面（未达成里程碑等） */
+  --rt-veil-deep: rgba(4, 7, 16, 0.94);    /* 最深表面（未解锁空槽） */
+
+  /* —— 由主题变量派生的 token（`:root` 里只写默认值，见 §1b）——
+     注意：`color-mix()` 的**百分比位置不允许用 var()**（实测会静默变透明），
+     所以下面一律把百分比写成字面量，只有颜色位置用 var()。 */
+  --rt-ink: color-mix(in srgb, var(--color) 100%, transparent);
+  --rt-ink-soft: color-mix(in srgb, var(--color) 74%, var(--background));
+  --rt-ink-faint: color-mix(in srgb, var(--color) 46%, var(--locked));
+  --rt-line: color-mix(in srgb, var(--color) 16%, transparent);
+  --rt-line-strong: color-mix(in srgb, var(--color) 34%, transparent);
+  --rt-panel: color-mix(in srgb, var(--background) 84%, var(--color));
+  --rt-panel-2: color-mix(in srgb, var(--background) 92%, var(--color));
+
+  /* —— 反相（已完成 / 已达成）：亮面板 + 深字 ——
+     刻意**不**派生自 --color（理由见文件头 §★2）。 */
+  --rt-invert-face: rgba(226, 242, 255, 0.94);
+  --rt-invert-bg: #e2f2ff;
+  --rt-invert-fg: #061524;
+
+  /* —— 极光描边（冷色科技感的关键：一条 1px 亮线 + 外描边）—— */
+  --rt-edge: 1px solid var(--rt-line-strong);
+  --rt-glow-ring: rgba(62, 230, 208, 0.42);
+  --rt-glow-ring-ice: rgba(143, 216, 255, 0.34);
+  --rt-ring-warm: rgba(255, 196, 110, 0.5);   /* 可重置 = 暖金，与冰蓝的 notify 成对 */
+  --rt-rim: rgba(223, 243, 255, 0.2);         /* 元素内侧的一条亮边 */
+
+  /* —— 尺寸 —— */
+  --radius: 2px;
+  --radius-lg: 6px;
+  --gap: 8px;
+  --pad: 10px;
+  --tooltip-w: 240px;
+  --bar-h: 30px;
+
+  /* —— 字体：西文优先（模组文案是英文，Reset for / Next at / Challenge），
+     中文回退保留（层名 / 部分说明仍是中文）—— */
+  --font-ui: "Inter", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-num: "SF Mono", "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+
+  --fs-tiny: 11px;
+  --fs-small: 12px;
+  --fs-base: 14px;
+  --fs-mid: 16px;
+  --fs-big: 20px;
+  --fs-huge: 30px;
+  --track: 0.06em;
+
+  /* —— 交互：只给交互元素，<= 0.15s（P6）—— */
+  --t-fast: 0.1s linear;
+  --t-base: 0.15s linear;
+
+  /* —— 层级 —— */
+  --z-canvas: 0;
+  --z-bg: -1;
+  --z-tree: 1;
+  --z-overlay: 10000;
+  --z-tooltip: 20000;
+  --z-popup: 120000;
+}
+
+/* --------------------------------------------------------------------------
+   1b. 派生 token 必须在 body 上再声明一次   ← 上一套踩着过的坑，务必保留
+   --------------------------------------------------------------------------
+   引擎（engine/options.js 的 changeTheme）是把主题色写进
+   `document.body.style` 的。而 `color-mix()` **是在「声明处」求值的**：
+   写在 `:root` 里就只能看到样式表里的默认 --color/--background，
+   读不到 body 上被 JS 覆盖过的值 —— 表现就是「暗底暗字」。
+   在 body 上再声明一遍，var() 取到的才是 body 自己的主题色；子元素照旧继承。
+
+   ─────────────────────────────────────────────────────────────────────────
+   ★★ 1b-2：--rt-bg / --rt-fg / --rt-point / --rt-lock 这一层"间接"为什么存在 ★★
+   ─────────────────────────────────────────────────────────────────────────
+   实测（1600×900，读 body 的行内 style）发现：**本模组的主题色根本没有生效**。
+       body.style = --background:#0f0f0f  --color:#dfdfdf  --points:#ffffff
+   而任务书给的极光色板是 #070b18 / #dff3ff / #a9f0e6。也就是说引擎用的是
+   `BUILTIN_COLORS.default`（engine/options.js:14）。
+
+   根因在 JS 侧（不是 CSS 能修的）：`applyConfiguredTheme()` 在
+   engine/options.js:36 定义，但**全仓库没有任何地方调用它**，
+   所以 `colors` 一直是 `BUILTIN_COLORS`、`themes` 一直是 `['default']`，
+   `RT.config.theme.colors` 里的极光色板从未被采用。二者后果：
+     · 主题色是灰色（#dfdfdf / #0f0f0f）而不是极光色；
+     · 主题列表只有 default ⇒ options.theme 永远只能是 default。
+
+   CSS 侧的应对（不改 JS、不加 !important）：所有视觉 token 一律读
+   **带兜底值的** `var(--rt-bg, <极光色>)`，而 --rt-bg 又默认继承
+   var(--background)：
+     · 引擎没写 --background（或写了别的值）→ 结构上仍是本文件 §1 的 aurora 默认值，
+       设计稿原样呈现，对比度计算（§1c）成立；
+     · 引擎哪天把极光色板接对了（行内 --background:#070b18）→ 行内声明赢过
+       body{} 规则，--rt-bg 自动跟随，CSS 一行都不用改。
+   也就是：**引擎修好之前好看，修好之后也对**。JS 侧的那一处漏调用见汇报。
+   -------------------------------------------------------------------------- */
+body {
+  --rt-bg: var(--background);
+  --rt-fg: var(--color);
+  --rt-point: var(--points);
+  --rt-lock: var(--locked);
+
+  --rt-ink: color-mix(in srgb, var(--color) 100%, transparent);
+  --rt-ink-soft: color-mix(in srgb, var(--color) 74%, var(--background));
+  --rt-ink-faint: color-mix(in srgb, var(--color) 46%, var(--locked));
+  --rt-line: color-mix(in srgb, var(--color) 16%, transparent);
+  --rt-line-strong: color-mix(in srgb, var(--color) 34%, transparent);
+  --rt-panel: color-mix(in srgb, var(--background) 84%, var(--color));
+  --rt-panel-2: color-mix(in srgb, var(--background) 92%, var(--color));
+  --rt-panel-3: rgba(6, 10, 22, 0.82);
+  --rt-edge: 1px solid var(--rt-line-strong);
+}
+
+/* 主题名（引擎写 body[data-theme]）。
+   ★ 关键：这里**不靠**它来决定薄纱的明暗方向 —— 两套主题都是深底浅字，
+   深纱对两者都成立。主题规则只做两件小事：
+     · 显式声明 --rt-veil，即使 data-theme 缺失（引擎没跑 / 读档前）也一致；
+     · aqua 的底更蓝更亮，星点稍微收暗一点，免得糊成一片。
+   这样 body[data-theme] 万一没写，界面也**不会崩**（默认值就是深纱）。 */
+body[data-theme="default"],
+body[data-theme="aqua"],
+body:not([data-theme]) {
+  --rt-veil: rgba(7, 11, 24, 0.88);
+  --rt-veil-soft: rgba(7, 11, 24, 0.70);
+  --rt-veil-deep: rgba(4, 7, 16, 0.94);
+}
+
+body[data-theme="aqua"] {
+  /* #001f3f 底更亮更蓝，星点用稍低的 alpha 才不会"浮在雾上" */
+  --star: rgba(206, 232, 255, 0.42);
+  --star-dim: rgba(206, 232, 255, 0.18);
+  --grid: rgba(150, 195, 240, 0.045);
+}
+
+/* --------------------------------------------------------------------------
+   2. reset（P6：刻意不写 `* { transition-duration }`）
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--color);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  overflow: hidden;
+  letter-spacing: 0.01em;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  /* 关键词：**任何地方都不出现 filter / backdrop-filter**（P2）。 */
+}
+
+/* --------------------------------------------------------------------------
+   2b. 深空极光底（P1 / P2 / P5）
+   --------------------------------------------------------------------------
+   ★ 全部是**静态** background-image / background-size / background-position。
+     没有 canvas、没有 filter、没有动画、没有 background-position 动画。
+
+   9 层径向渐变拼出极光带（青绿 / 靛蓝 / 紫 / 冰蓝，各层 2~3 段柔化边缘），
+   柔化靠「多段径向渐变」而不是 `filter: blur()`（P2）。
+   星点用两套 radial-gradient 点阵 + background-size 错开半格铺开（P5），
+   三层不同尺寸/密度叠出景深。
+
+   为什么不做"一层可动的极光"（P4 允许的那一层）：
+   需求写的是「能不做动画就最好不做 —— 静态渐变本身就够好看」。
+   静态的代价是 0，收益是「屏幕上正在跑的动画数 = 0」，这个证据比
+   「我看它挺顺的」硬得多。所以本风格**连那一层都没做**。
+   -------------------------------------------------------------------------- */
+body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* 用 100vh 而不是 100%：body 是滚动容器时 100% 会变成整个文档高度，
+     极光会被拉伸到几屏高（那样每条径向渐变都被扯平、看着像没画）。 */
+  height: 100vh;
+  z-index: var(--z-bg);
+  pointer-events: none;
+  background-color: var(--background);
+  background-image:
+    /* ① 极光帘：青绿（左上，最亮的核心）*/
+    radial-gradient(38% 30% at 16% 10%, color-mix(in srgb, var(--aur-a) 32%, transparent) 0%, color-mix(in srgb, var(--aur-a) 12%, transparent) 42%, transparent 74%),
+    radial-gradient(52% 38% at 11% 16%, color-mix(in srgb, var(--aur-a) 16%, transparent) 0%, transparent 70%),
+    /* ② 极光帘：靛蓝（右上）*/
+    radial-gradient(36% 28% at 87% 8%, color-mix(in srgb, var(--aur-b) 30%, transparent) 0%, color-mix(in srgb, var(--aur-b) 11%, transparent) 44%, transparent 76%),
+    radial-gradient(56% 40% at 93% 18%, color-mix(in srgb, var(--aur-b) 15%, transparent) 0%, transparent 72%),
+    /* ③ 极光帘：紫（中下，最柔的一条）*/
+    radial-gradient(44% 30% at 44% 92%, color-mix(in srgb, var(--aur-c) 24%, transparent) 0%, color-mix(in srgb, var(--aur-c) 9%, transparent) 46%, transparent 78%),
+    radial-gradient(78% 48% at 34% 100%, color-mix(in srgb, var(--aur-c) 13%, transparent) 0%, transparent 76%),
+    /* ④ 冰蓝亮脊：全图最亮的一抹，给极光一条"骨架" */
+    radial-gradient(18% 14% at 27% 24%, color-mix(in srgb, var(--aur-d) 24%, transparent) 0%, transparent 70%),
+    /* ⑤ 垂直光柱（aurora curtain 的条纹感）：用 34% 宽的底纹平铺，
+          不用「一整屏 2px 条纹的 repeating 渐变」——那会让光栅化一整屏的细条纹，
+          是纯浪费（合成面积与条数都翻几十倍，观感却看不出差别）。 */
+    repeating-linear-gradient(90deg,
+      rgba(255, 255, 255, 0.03) 0 1px,
+      transparent 1px 11px),
+    /* ⑥ 星点：三层不同尺寸/密度（静态点阵，P5）*/
+    radial-gradient(var(--star) 1.2px, transparent 1.9px),
+    radial-gradient(var(--star-dim) 1px, transparent 1.5px),
+    radial-gradient(var(--star-dim) 1px, transparent 1.4px),
+    /* ⑦ 极淡网格：给出"坐标感" */
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:
+    100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%,
+    11px 46%,
+    168px 168px, 96px 96px, 47px 47px,
+    64px 64px, 64px 64px;
+  background-position:
+    center, center, center, center, center, center, center,
+    0 0,
+    12px 34px, 58px 12px, 26px 78px,
+    0 0, 0 0;
+  /* 只保留顶部 58% 的高度放"光柱"，避免它铺满整屏（视觉上也不必）。 */
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat,
+    no-repeat, no-repeat,
+    repeat,
+    repeat, repeat, repeat,
+    repeat, repeat;
+}
+
+/* 视口内圈：一条极淡的冷色细边（静态 border，不是阴影）。
+   用 absolute + 100vh 而不是 fixed + inset：本页有多个 position:relative 的
+   滚动容器，absolute 挂在初始包含块上、不参与任何滚动上下文，
+   观感与 fixed 一致，也省掉一层固定定位的特殊处理。 */
+body::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 999999;
+  border: 1px solid rgba(143, 216, 255, 0.1);
+  pointer-events: none;
+}
+
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 1px solid var(--aur-d);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   3. 排版
+   -------------------------------------------------------------------------- */
+h1,
+h2,
+h3,
+h4,
+b,
+i,
+strong,
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-weight: 700;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  display: inline;
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--fs-huge);
+}
+
+h2 {
+  font-size: var(--fs-big);
+  letter-spacing: 0.02em;
+}
+
+h3 {
+  font-size: var(--fs-mid);
+  letter-spacing: 0.03em;
+}
+
+h4 {
+  font-size: var(--fs-base);
+}
+
+/* 数值/单位用等宽：数字不跳动，读数才有仪表感 */
+b,
+strong {
+  font-family: var(--font-num);
+  color: var(--rt-ink);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+small {
+  font-size: var(--fs-tiny);
+}
+
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  list-style: none;
+}
+
+a,
+.link {
+  color: var(--aur-d);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--t-fast);
+}
+
+.link {
+  display: block;
+  font-size: var(--fs-big);
+  letter-spacing: var(--track);
+}
+
+a:hover,
+.link:hover {
+  color: var(--rt-ink);
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--rt-line);
+  margin: var(--gap) 0;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 0 auto;
+}
+
+td {
+  padding: 0;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background-color: transparent;
+  /* 关掉浏览器原生外观：否则 <button> 的匿名内容盒会干扰
+     .treeNode / .upg 这类需要内容居中的盒子。 */
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+  margin: 0;
+  cursor: pointer;
+  letter-spacing: var(--track);
+  background-clip: padding-box;
+}
+
+/* 按钮内部的节点不吃指针事件（根事件委托靠它才不会错层）。 */
+button > * {
+  pointer-events: none;
+}
+
+input,
+select,
+textarea {
+  background-color: var(--rt-panel);
+  color: var(--color);
+  border: 1px solid var(--rt-line-strong);
+  border-radius: var(--radius);
+  padding: 4px 6px;
+  font-family: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   4. 通用状态类
+   --------------------------------------------------------------------------
+   伪元素分工（全站统一，避免互相覆盖；元素只有 ::before / ::after 两个）：
+     ::before → .bought/.done/.canComplete 的"已完成面板" 与 .resetNotify 的角标
+     ::after  → .notify 的呼吸装饰层 / 已完成元素右上角的标记
+   两者都只用 background / opacity 工作，**不碰 border / box-shadow**，
+   所以引擎内联给 .notify 的 `inset 0 0 0 3px <glowColor>` 内嵌环不会被顶掉。
+   -------------------------------------------------------------------------- */
+.can {
+  cursor: pointer;
+}
+
+/* P6：只有交互元素有 transition，且都用 <= 0.15s 的 --t-fast/--t-base */
+.upg.can,
+.upgBig.can,
+.buyable.can,
+.tile.can,
+.achievement.can,
+.challenge.can,
+.reset.can,
+.prestige-button.can,
+.smallUpg.can,
+.opt.can,
+.treeNode.can,
+.treeButton.can,
+.tabButton,
+.longUpg.can,
+.remove {
+  transition: border-color var(--t-fast), color var(--t-fast),
+    background-color var(--t-fast);
+}
+
+/* 未解锁 / 不可用：发光收掉、文字降到 faint。
+   形状区分不靠颜色单打独斗 —— 组件层再把虚线边 / 空槽底加上去。 */
+.locked {
+  color: var(--rt-ink-faint);
+  cursor: not-allowed;
+}
+
+.locked:hover {
+  cursor: not-allowed;
+}
+
+.locked b,
+.locked strong,
+.locked h3 {
+  color: var(--rt-ink-faint);
+}
+
+/* 已完成 / 已达成：亮面板 + 深字（浅底，与深空底对比强烈，一眼可辨）。
+   ------------------------------------------------------------------------
+   为什么用 `::before` 当面板而不是直接写 background-color：
+   层底色是内容层**内联**的 background-color，内联声明永远赢过样式表
+   （除非 !important，但那被明令禁止）。所以只能"盖"不能"改"。
+   .bought 同时把薄纱 background-image 关掉，否则薄纱会压在亮面板上。 */
+.bought,
+.done,
+.canComplete,
+.milestoneDone {
+  background-image: none;
+  color: var(--rt-invert-fg);
+  border-style: solid;
+  cursor: default;
+}
+
+.bought::before,
+.done::before,
+.canComplete::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* 用简写 `background`：只写 background-color 会被上面 `.bought` 里的
+     `background-image: none` 清成透明。 */
+  background: var(--rt-invert-face);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* 标记画在 `::after` 上（`::before` 已让给面板）。
+   已完成的元素不再需要 notify 的呼吸装饰，所以不会撞车。 */
+.bought::after,
+.done::after,
+.canComplete::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 3;
+  width: 6px;
+  height: 6px;
+  background-color: var(--rt-invert-fg);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.bought b,
+.bought strong,
+.bought h3,
+.done b,
+.done strong,
+.done h3,
+.canComplete b,
+.canComplete strong,
+.canComplete h3 {
+  color: inherit;
+}
+
+/* 有新内容：只动 opacity（便宜、且不动画 box-shadow）。
+   不再用 repeating-linear-gradient 的"走马灯"（那要动 background-position，
+   等于每帧重绘整块）。改成一层静态斜纹 + 缓慢呼吸，观感接近、成本更低。 */
+.notify {
+  border-color: var(--rt-glow-ring);
+}
+
+.notify::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--rt-line-strong) 0 1px,
+    transparent 1px 9px
+  );
+  border-radius: inherit;
+  opacity: 0.5;
+  animation: rt-breathe 1.9s ease-in-out infinite;
+}
+
+/* 可重置：另一种线型（45° 细纹 + 琥珀色边），与 .notify 明显不同 */
+.resetNotify {
+  border-color: var(--rt-ring-warm);
+}
+
+.resetNotify::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--rt-veil-soft) 0 2px,
+    transparent 2px 9px
+  );
+  border-radius: inherit;
+  opacity: 0.9;
+}
+
+/* 两者同时成立：斜纹压住点纹，一金一冰，仍可分辨。
+   （金的来自 --rt-ring-warm 的边框，冰的来自 ::after 的点纹。） */
+.notify.resetNotify::after {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--rt-line-strong) 0 1px,
+    transparent 1px 5px
+  );
+  opacity: 0.62;
+}
+
+/* 已完成面板上的装饰换色，否则浅色纹理叠在浅面板上什么都看不见 */
+.bought.notify::after,
+.done.notify::after,
+.canComplete.notify::after {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(6, 21, 36, 0.34) 0 1px,
+    transparent 1px 9px
+  );
+}
+
+.bought.resetNotify::before,
+.done.resetNotify::before,
+.canComplete.resetNotify::before {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(6, 21, 36, 0.28) 0 2px,
+    transparent 2px 9px
+  );
+}
+
+/* ---- 关键帧 -------------------------------------------------------------
+   全站只有 **1** 个关键帧，且**只动 opacity**（P3/P4）。
+   `rt-breathe` 给 `.notify::after`（"有新升级可买"的提示层）：
+   元素数量少、都挂在**小尺寸**的伪元素上，只改 opacity 不触发重排/重绘布局。
+   没有第二个关键帧 —— 极光层静态、星点静态、.tabButton 的走马灯已删除
+   （它要动 background-position，等于每帧重绘整块）。 */
+@keyframes rt-breathe {
+  0%,
+  100% {
+    opacity: 0.34;
+  }
+  50% {
+    opacity: 0.66;
+  }
+}
+
+/* 隐藏 */
+.ghost,
+.hidden {
+  visibility: hidden;
+}
+
+/* 实时文本不做过渡（引擎每 50ms 重写文本，过渡只会让它发虚） */
+.instant,
+.fast {
+  transition: none;
+}
+
+.redtext {
+  color: #ff8595;
+}
+
+.forceTooltip {
+  position: relative;
+}
+
+.noBackground {
+  background: transparent;
+}
+
+/* 薄纱工具类：给需要「压住层色但文字仍清晰」的元素复用 */
+.rt-veil {
+  background-image: linear-gradient(var(--rt-veil), var(--rt-veil));
+}
+
+/* 无障碍：尊重系统「减少动态效果」—— 两个关键帧都停 */
+@media (prefers-reduced-motion: reduce) {
+  .notify::after,
+  .resetNotify::after {
+    animation: none;
+  }
+}
