@@ -115,9 +115,11 @@ function showNavTab(name, prev) {
 }
 
 function goBack(layer) {
-  // 单标签模式（窄宽度）：返回就是回到树 —— 否则会落到 tab='none'，整屏空白。
-  if (tmp.other && tmp.other.oneTabTree && player.navTab === 'none') {
-    const tree = tmp.other.oneTabTree;
+  // 单标签模式：返回就是回到树 —— 否则会落到 tab='none'，整屏空白。
+  // oneTabTree 是运行时变量，刷新后会丢，所以这里还要兜底到内容层的树层 id。
+  if (player.navTab === 'none' && !(tmp[layer] && tmp[layer].leftTab)) {
+    const tree = (tmp.other && tmp.other.oneTabTree) ||
+      ((typeof layoutInfo !== 'undefined' && layoutInfo && layoutInfo.startNavTab) || 'tree-tab');
     showNavTab(tree, layer);
     showTab('none');
     return;

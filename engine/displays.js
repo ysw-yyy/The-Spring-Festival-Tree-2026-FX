@@ -120,9 +120,13 @@ function updateWidth() {
       tmp.other.oneTabWideFixed = true;
       player.navTab = treeLayer;
     }
-  } else if (!options.forceOneTab && !tmp.other.oneTabTree && player.navTab !== 'none' && player.tab !== 'none') {
+  } else if (!tmp.other.oneTabTree && player.navTab !== 'none' && player.tab !== 'none' && !options.forceOneTab) {
     tmp.other.oneTabTree = player.navTab;
     player.navTab = 'none';
+  } else if (narrow && !tmp.other.oneTabTree && player.navTab === 'none' && player.tab !== 'none') {
+    // 窄屏 + 存档里已经是 navTab='none'（上次单标签被存下来了）：这里补上 oneTabTree，
+    // 否则返回按钮与 goBack 都不知道树在哪一层。
+    tmp.other.oneTabTree = treeLayer;
   }
   tmp.other.screenWidth = screenWidth;
   tmp.other.screenHeight = window.innerHeight;

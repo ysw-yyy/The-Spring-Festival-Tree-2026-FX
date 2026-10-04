@@ -98,7 +98,10 @@ RT.system = (function () {
     // 返回按钮：与上游条件一致
     const navPrev = player.navTab !== 'none' && player[player.navTab] && player[player.navTab].prevTab;
     // 单标签模式（窄宽度）下也要给返回按钮：否则进了层内容就回不到树。
-    const oneTab = !tmp.other.splitScreen || !!options.forceOneTab || !!tmp.other.oneTabTree;
+    // navTab === 'none' 意味着"单栏正在显示当前标签、树不在屏幕上"，
+    // 此时必须有返回按钮，否则刷新后（oneTabTree 是运行时的、会丢）就被困在层页面里。
+    const oneTab = !tmp.other.splitScreen || !!options.forceOneTab || !!tmp.other.oneTabTree ||
+      player.navTab === 'none';
     const tabPrev = player.navTab == 'none' && player.tab !== 'none' && tmp[player.tab] &&
       (tmp[player.tab].row == 'side' || tmp[player.tab].row == 'otherside' || player[player.tab].prevTab || oneTab);
     if (navPrev || tabPrev) {
