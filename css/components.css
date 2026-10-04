@@ -1990,3 +1990,27 @@ button.upg.treeThing {
 .challenge button::after {
   background-image: none !important;
 }
+
+
+/* ==========================================================================
+   I26. 挑战说明文字：红色 + 发光 + 呼吸
+   --------------------------------------------------------------------------
+   引擎给说明那一段加了 .challengeDesc（fullDisplay 与 challengeDescription 两个分支都加），
+   所以只影响说明文字，不会染到"目标 / 奖励 / 当前"那几行。
+   发光用**静态** text-shadow 模板，动画只动 opacity —— 符合工作区那条
+   "数值/文字发光必须静态、不要动画 text-shadow" 的红线。
+   ========================================================================== */
+.challenge > .challengeDesc {
+  display: inline-block;
+  color: #ff5a52;
+  font-weight: 600;
+  text-shadow:
+    0 0 8px rgba(255, 90, 82, 0.55),
+    0 0 18px rgba(255, 90, 82, 0.28);
+  animation: rt-warn-breathe 2.2s ease-in-out infinite;
+}
+
+@keyframes rt-warn-breathe {
+  0%, 100% { opacity: 0.72; }
+  50%      { opacity: 1; }
+}

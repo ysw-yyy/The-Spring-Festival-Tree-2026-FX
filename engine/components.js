@@ -251,9 +251,9 @@ RT.components = (function () {
     body.push(h('br'));
     body.push(h('br'));
     if (layers[layer].challenges[data].fullDisplay) {
-      body.push(h('span', { html: run(layers[layer].challenges[data].fullDisplay, layers[layer].challenges[data]) }));
+      body.push(h('span', { class: 'challengeDesc', html: run(layers[layer].challenges[data].fullDisplay, layers[layer].challenges[data]) }));
     } else {
-      body.push(h('span', { html: ch.challengeDescription }));
+      body.push(h('span', { class: 'challengeDesc', html: ch.challengeDescription }));
       body.push(h('br'));
       body.push(text('目标:  '));
       if (ch.goalDescription) {
