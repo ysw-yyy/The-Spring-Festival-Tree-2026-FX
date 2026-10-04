@@ -2055,3 +2055,32 @@ button.upg.treeThing {
     0 0 14px rgba(255, 204, 77, 0.22);
   animation: none;
 }
+/* ==========================================================================
+   I29. 电脑上一排两个挑战（并保持正方形）
+   --------------------------------------------------------------------------
+   实测：挑战行宽 799px，卡片 460px 时一行只能放一个。
+   目标是一行两个 **且仍是正方形** —— 于是宽度取半幅（(100% - 间距)/2 ≈ 396），
+   高度跟着等于宽度；代价是字号必须收小，否则内容（370 宽时需要 460 高）放不下。
+   这里用 11.5px 档：内容高度约 460×11.5/14 ≈ 378 < 396，能容纳。
+   ========================================================================== */
+@media (min-width: 701px) {
+  .challenge {
+    --challenge-size: min(460px, calc((100% - var(--gap, 6px)) / 2));
+    width: var(--challenge-size);
+    height: var(--challenge-size);
+    aspect-ratio: 1 / 1;
+    font-size: 11.5px;
+    line-height: 1.35;
+    padding: 8px;
+  }
+
+  .challenge h3 {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  .challenge button {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+}
