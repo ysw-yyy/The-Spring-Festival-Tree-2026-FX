@@ -266,7 +266,9 @@ RT.components = (function () {
       body.push(h('span', { class: 'challengeReward', html: ch.rewardDescription }));
       body.push(h('br'));
       if (layers[layer].challenges[data].rewardDisplay !== undefined) {
-        body.push(h('span', {}, [
+        // 给外层加类名即可："当前: "是文本节点、数值是内层 span，
+        // 颜色从外层继承下去，两段一起染色（不必再包一层）。
+        body.push(h('span', { class: 'challengeCurrent' }, [
           text('当前: '),
           h('span', {
             html: (ch.rewardDisplay)
