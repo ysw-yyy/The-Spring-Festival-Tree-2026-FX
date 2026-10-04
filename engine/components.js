@@ -241,14 +241,14 @@ RT.components = (function () {
     const body = [];
     body.push(h('br'));
     body.push(h('h3', { html: ch.name }));
-    body.push(h('br'));
+    // challengeTightened：原来是成对 <br>（= 两行空行），间距过大把 EC1 顶到边框；
+    // 收成单个。段间距交给 CSS 的内边距/行高控制。
     body.push(h('br'));
     body.push(h('button', {
       class: 'longUpg can ' + layer,
       style: { 'background-color': tmp[layer].color },
       data: { act: 'startChallenge', layer: layer, id: String(data) },
     }, [text(challengeButtonText(layer, data))]));
-    body.push(h('br'));
     body.push(h('br'));
     if (layers[layer].challenges[data].fullDisplay) {
       body.push(h('span', { class: 'challengeDesc', html: run(layers[layer].challenges[data].fullDisplay, layers[layer].challenges[data]) }));

@@ -2084,3 +2084,65 @@ button.upg.treeThing {
     padding: 4px 10px;
   }
 }
+/* ==========================================================================
+   I30. 挑战内间距收紧
+   --------------------------------------------------------------------------
+   实测：396x396 的卡里内容 394，只剩 2px 余量，EC1 那种三行说明几乎顶到边框。
+   引擎用成对 <br> 撑开各段，CSS 里没法只压缩这些 br（内容层的 <br> 也是同一元素），
+   所以统一收 line-height 与内边距 —— 段间距与文字行距一起变紧。
+   ========================================================================== */
+@media (min-width: 701px) {
+  .challenge {
+    line-height: 1.2;
+    padding: 6px;
+    font-size: 11px;
+  }
+
+  .challenge h3 {
+    margin: 2px 0;
+    font-size: 13.5px;
+  }
+
+  .challenge button {
+    margin: 2px 0;
+    padding: 3px 8px;
+    font-size: 11.5px;
+  }
+}
+
+/* ==========================================================================
+   I31. 手机：长按不再选中文字 / 去掉点击高亮、消除双击缩放
+   --------------------------------------------------------------------------
+   手机上按住"填充能量条"会触发浏览器文本选择（用户实拍）。游戏界面不需要选文字，
+   所以整体关掉 user-select，并顺手处理移动端两个常见毛病：
+   -webkit-tap-highlight-color 去掉点击时的灰色高亮；touch-action 去掉双击缩放。
+   输入框/文本域例外保留可选择（导出存档等处要用）。
+   ========================================================================== */
+html,
+body,
+#app,
+#app * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+#app input,
+#app textarea,
+#app [contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+#app button,
+#app .treeNode,
+#app .upg,
+#app .buyable,
+#app .clickable,
+#app .barWrap,
+#app .milestone,
+#app .achievement,
+#app .challenge {
+  touch-action: manipulation;
+}
