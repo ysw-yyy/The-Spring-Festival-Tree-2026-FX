@@ -192,6 +192,9 @@ function drawTreeBranch(num1, data, prefix) {
     ctx.setLineDash(dash || []);
     ctx.lineDashOffset = offset || 0;
     ctx.lineWidth = w;
+    // 圆头：虚线段的两端因此是半圆收细，而不是硬切 —— 每段都自带"两端渐变"的观感
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.strokeStyle = branchGrad(style, x1, y1, x2, y2);
     ctx.shadowBlur = glow || 0;
     ctx.shadowColor = glowColor || 'transparent';

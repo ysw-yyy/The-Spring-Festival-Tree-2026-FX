@@ -148,8 +148,8 @@ RT.config = {
     // 关掉 = 静止实线；prefers-reduced-motion 下会自动关。
     animateBranches: true,
     branchFlowFps: 30,      // 重绘频率：整屏画布的重绘是主要成本，30 足够顺
-    branchDash: [34, 26],   // 光段 / 空隙：拉长一点，脉冲更清楚
-    branchLineWidth: 1.4,   // ★ 连线很细：底轨与光芯都以它为基准
+    branchDash: [20, 30],   // 光段 / 空隙：拉长一点，脉冲更清楚
+    branchLineWidth: 1.8,   // ★ 连线很细：底轨与光芯都以它为基准
     branchGlow: 18,         // ★ 光芯的辉光半径（px）——细线要显发光就靠它
     branchHalo: 4.2,        // 光晕层宽度 = 线宽 × 这个倍数（宽而淡，垫在光芯下）
     branchHaloAlpha: 0.32,  // 光晕层透明度
