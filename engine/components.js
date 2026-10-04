@@ -262,8 +262,8 @@ RT.components = (function () {
         body.push(h('span', {}, [text(format(ch.goal) + ' ' + (ch.currencyDisplayName ? ch.currencyDisplayName : modInfo.pointsName))]));
       }
       body.push(h('br'));
-      body.push(text('奖励: '));
-      body.push(h('span', { html: ch.rewardDescription }));
+      body.push(h('span', { class: 'challengeRewardLabel' }, [text('奖励: ')]));
+      body.push(h('span', { class: 'challengeReward', html: ch.rewardDescription }));
       body.push(h('br'));
       if (layers[layer].challenges[data].rewardDisplay !== undefined) {
         body.push(h('span', {}, [

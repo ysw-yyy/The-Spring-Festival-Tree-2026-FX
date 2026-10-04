@@ -2016,3 +2016,26 @@ button.upg.treeThing {
   0%, 100% { opacity: 0.72; }
   50%      { opacity: 1; }
 }
+
+/* ==========================================================================
+   I27. 挑战奖励：金黄色 + 发光 + 呼吸
+   --------------------------------------------------------------------------
+   引擎把"奖励: "这个文本节点包成了 <span class="challengeRewardLabel">，
+   数值那一段加了 .challengeReward —— 两段一起染金，才看得出是一整行。
+   发光仍是静态 text-shadow 模板，动画只动 opacity（工作区红线）。
+   ========================================================================== */
+.challenge > .challengeRewardLabel,
+.challenge > .challengeReward,
+.challenge > .challengeRewardLabel + .challengeReward {
+  color: #ffcc4d;
+  font-weight: 600;
+  text-shadow:
+    0 0 8px rgba(255, 204, 77, 0.55),
+    0 0 18px rgba(255, 204, 77, 0.28);
+  animation: rt-reward-breathe 2.6s ease-in-out infinite;
+}
+
+@keyframes rt-reward-breathe {
+  0%, 100% { opacity: 0.76; }
+  50%      { opacity: 1; }
+}
