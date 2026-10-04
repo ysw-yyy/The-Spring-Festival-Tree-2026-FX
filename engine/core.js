@@ -150,9 +150,9 @@ RT.config = {
     branchFlowFps: 30,      // 重绘频率：整屏画布的重绘是主要成本，30 足够顺
     branchDash: [34, 26],   // 光段 / 空隙：拉长一点，脉冲更清楚
     branchLineWidth: 1.4,   // ★ 连线很细：底轨与光芯都以它为基准
-    branchGlow: 11,         // ★ 光芯的辉光半径（px）——细线要显发光就靠它
-    branchHalo: 3.4,        // 光晕层宽度 = 线宽 × 这个倍数（宽而淡，垫在光芯下）
-    branchHaloAlpha: 0.22,  // 光晕层透明度
+    branchGlow: 18,         // ★ 光芯的辉光半径（px）——细线要显发光就靠它
+    branchHalo: 4.2,        // 光晕层宽度 = 线宽 × 这个倍数（宽而淡，垫在光芯下）
+    branchHaloAlpha: 0.32,  // 光晕层透明度
     // 购买闪光（边沿触发）。关掉 = 不闪。
     boughtFlash: true,
     branchDashSpeed: 1.6,   // 每帧推进的偏移量（30fps 下约 48px/秒）

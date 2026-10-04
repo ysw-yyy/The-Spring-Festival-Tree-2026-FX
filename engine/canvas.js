@@ -22,6 +22,7 @@ function resizeCanvas() {
   if (!retrieveCanvasData()) return;
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  branchGradCache.clear();
   drawTree();
 }
 
@@ -41,6 +42,55 @@ function branchShade(color, amt) {
   if (amt > 0) { r += (255 - r) * amt; g += (255 - g) * amt; b += (255 - b) * amt; }
   else { r *= (1 + amt); g *= (1 + amt); b *= (1 + amt); }
   return 'rgb(' + Math.round(r) + ',' + Math.round(g) + ',' + Math.round(b) + ')';
+}
+
+// 沿线段方向的渐变：两端透明、中段实色 —— 让连线两端"虚化"而不是硬切。
+// 渐变对象按 (颜色 + 取整后的坐标) 缓存，避免每帧为每条连线重建。
+var branchGradCache = new Map();
+
+function branchFade(color) {
+  if (typeof color !== 'string') return color;
+  var m = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(color);
+  if (m) return 'rgba(' + m[1] + ',' + m[2] + ',' + m[3] + ',0)';
+  var h = /^#([0-9a-fA-F]{6})$/.exec(color);
+  if (h) {
+    var n = parseInt(h[1], 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',0)';
+  }
+  return 'rgba(255,255,255,0)';
+}
+
+function branchGrad(color, x1, y1, x2, y2) {
+  var key = color + '|' + Math.round(x1) + ',' + Math.round(y1) + ',' + Math.round(x2) + ',' + Math.round(y2);
+  var g = branchGradCache.get(key);
+  if (g) return g;
+  g = ctx.createLinearGradient(x1, y1, x2, y2);
+  var soft = branchFade(color);
+  g.addColorStop(0, soft);
+  g.addColorStop(0.16, color);
+  g.addColorStop(0.84, color);
+  g.addColorStop(1, soft);
+  if (branchGradCache.size > 800) branchGradCache.clear();
+  branchGradCache.set(key, g);
+  return g;
+}
+
+// 滚动时立即重绘：画布是 fixed 的，节点在滚动容器里，不重绘就会"线跟着慢半拍"。
+var scrollRafPending = false;
+function onScrollRedraw() {
+  if (scrollRafPending) return;
+  scrollRafPending = true;
+  var run = function () { scrollRafPending = false; drawTree(); };
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run);
+  else setTimeout(run, 16);
+}
+
+function attachScrollRedraw() {
+  if (typeof window === 'undefined' || !window.addEventListener) return;
+  // capture: true —— 滚动事件不冒泡（scroll 只在目标元素上触发），必须用捕获阶段才能听到容器滚动
+  var opts = { passive: true, capture: true };
+  window.addEventListener('scroll', onScrollRedraw, opts);
+  document.addEventListener('scroll', onScrollRedraw, opts);
 }
 
 function branchFlowOn() {
@@ -140,7 +190,7 @@ function drawTreeBranch(num1, data, prefix) {
     ctx.setLineDash(dash || []);
     ctx.lineDashOffset = offset || 0;
     ctx.lineWidth = w;
-    ctx.strokeStyle = style;
+    ctx.strokeStyle = branchGrad(style, x1, y1, x2, y2);
     ctx.shadowBlur = glow || 0;
     ctx.shadowColor = glowColor || 'transparent';
     ctx.globalAlpha = alpha === undefined ? 1 : alpha;
@@ -166,6 +216,7 @@ function drawTreeBranch(num1, data, prefix) {
 
 RT.canvas = {
   resize: resizeCanvas,
+  attachScroll: attachScrollRedraw,
   stopFlow: stopBranchFlow,
   draw: drawTree,
   hasCanvas: function () { return !!document.getElementById('treeCanvas'); },
