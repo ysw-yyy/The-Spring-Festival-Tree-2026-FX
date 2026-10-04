@@ -99,6 +99,18 @@ function updateWidth() {
   // 窄宽度（低于 oneTabWidth）自动进单标签页：
   // 否则两栏都会渲染，右栏被挤到树的下面，看起来就是点了节点打不开任何界面。
   // oneTabTree 记住树停在哪一层，供返回按钮用；窗口变宽时恢复。
+  // 树层 id 的唯一正确来源：内容层的 layoutInfo.startNavTab（SF 是 'tree-tab'）。
+  // 之前我用 player.lastSafeTab 去恢复，而它记的是最近打开的非侧栏标签（例如 'p'），
+  // 于是左栏display成了那一层的内容、树不见了（用户实拍"左边应是树、右边是其他的"）。
+  const treeLayer = (typeof layoutInfo !== 'undefined' && layoutInfo && layoutInfo.startNavTab)
+    ? layoutInfo.startNavTab : 'tree-tab';
+  // 一次性修正存档里被写脏的 navTab：既不是树层、也不是侧栏层的值都拉回树层。
+  if (!tmp.other.navSanitized) {
+    tmp.other.navSanitized = true;
+    const navOk = player.navTab === 'none' || player.navTab === treeLayer ||
+      (tmp[player.navTab] && tmp[player.navTab].leftTab);
+    if (!navOk) player.navTab = treeLayer;
+  }
   if (!narrow) {
     if (tmp.other.oneTabTree) { player.navTab = tmp.other.oneTabTree; tmp.other.oneTabTree = null; }
     // ★ player.navTab 是**存在存档里**的：窄屏时被自动改成 'none' 之后，游戏一自动存档就固定下来，
@@ -106,8 +118,7 @@ function updateWidth() {
     //   只做一次，所以之后用户自己用返回按钮进单标签仍然有效。
     else if (!tmp.other.oneTabWideFixed && !options.forceOneTab && player.navTab === 'none' && player.tab !== 'none') {
       tmp.other.oneTabWideFixed = true;
-      // lastSafeTab 本身可能是 'none'（它初始就是 none），所以还要兜底到树层 id
-      player.navTab = (player.lastSafeTab && player.lastSafeTab !== 'none') ? player.lastSafeTab : 'tree-tab';
+      player.navTab = treeLayer;
     }
   } else if (!options.forceOneTab && !tmp.other.oneTabTree && player.navTab !== 'none' && player.tab !== 'none') {
     tmp.other.oneTabTree = player.navTab;

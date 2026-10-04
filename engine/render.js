@@ -302,7 +302,9 @@ RT.delegation = (function () {
         // 非分屏（窄宽度 / 强制单标签）：内容整屏显示，树用返回按钮回去。
         // 不这么做的话节点点了也看不到界面（右栏被挤到树下面）。
         if (!tmp.other.splitScreen) {
-          if (!tmp.other.oneTabTree) tmp.other.oneTabTree = player.navTab === 'none' ? 'tree-tab' : player.navTab;
+          // 记住的一定是树层（返回按钮要回到树），而不是当前 navTab 的临时值
+          if (!tmp.other.oneTabTree) tmp.other.oneTabTree = (typeof layoutInfo !== 'undefined' && layoutInfo && layoutInfo.startNavTab)
+            ? layoutInfo.startNavTab : 'tree-tab';
           showNavTab('none');
         }
       }
