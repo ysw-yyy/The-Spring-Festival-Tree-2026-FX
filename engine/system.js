@@ -97,8 +97,10 @@ RT.system = (function () {
 
     // 返回按钮：与上游条件一致
     const navPrev = player.navTab !== 'none' && player[player.navTab] && player[player.navTab].prevTab;
+    // 单标签模式（窄宽度）下也要给返回按钮：否则进了层内容就回不到树。
+    const oneTab = !tmp.other.splitScreen || !!options.forceOneTab || !!tmp.other.oneTabTree;
     const tabPrev = player.navTab == 'none' && player.tab !== 'none' && tmp[player.tab] &&
-      (tmp[player.tab].row == 'side' || tmp[player.tab].row == 'otherside' || player[player.tab].prevTab);
+      (tmp[player.tab].row == 'side' || tmp[player.tab].row == 'otherside' || player[player.tab].prevTab || oneTab);
     if (navPrev || tabPrev) {
       kids.push(h('button', {
         class: 'other-back overlayThing',

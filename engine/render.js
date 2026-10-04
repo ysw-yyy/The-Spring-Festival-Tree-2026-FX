@@ -299,6 +299,12 @@ RT.delegation = (function () {
         showTab('none');
       } else {
         showTab(layer, prev);
+        // 非分屏（窄宽度 / 强制单标签）：内容整屏显示，树用返回按钮回去。
+        // 不这么做的话节点点了也看不到界面（右栏被挤到树下面）。
+        if (!tmp.other.splitScreen) {
+          if (!tmp.other.oneTabTree) tmp.other.oneTabTree = player.navTab === 'none' ? 'tree-tab' : player.navTab;
+          showNavTab('none');
+        }
       }
     } else {
       run(layers[layer].onClick, layers[layer]);

@@ -115,6 +115,13 @@ function showNavTab(name, prev) {
 }
 
 function goBack(layer) {
+  // 单标签模式（窄宽度）：返回就是回到树 —— 否则会落到 tab='none'，整屏空白。
+  if (tmp.other && tmp.other.oneTabTree && player.navTab === 'none') {
+    const tree = tmp.other.oneTabTree;
+    showNavTab(tree, layer);
+    showTab('none');
+    return;
+  }
   let nextTab = 'none';
   if (player[layer] && player[layer].prevTab) nextTab = player[layer].prevTab;
   if (player.navTab === 'none' && tmp[layer] && (tmp[layer].row == 'side' || tmp[layer].row == 'otherside')) {

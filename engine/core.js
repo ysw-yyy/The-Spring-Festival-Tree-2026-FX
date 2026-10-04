@@ -155,6 +155,8 @@ RT.config = {
     branchHaloAlpha: 0.32,  // 光晕层透明度
     // 购买闪光（边沿触发）。关掉 = 不闪。
     boughtFlash: true,
+    // 窄于这个宽度就自动进单标签页（内容整屏显示，树用返回按钮回去）
+    oneTabWidth: 1024,
     branchDashSpeed: 1.6,   // 每帧推进的偏移量（30fps 下约 48px/秒）
   },
   layout: {

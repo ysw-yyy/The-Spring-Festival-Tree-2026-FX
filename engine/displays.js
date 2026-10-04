@@ -91,9 +91,20 @@ function milestoneShown(layer, id) {
 
 function updateWidth() {
   const screenWidth = window.innerWidth;
+  const oneTabW = (RT.config.ui && RT.config.ui.oneTabWidth) || 1024;
+  const narrow = screenWidth < oneTabW;
   let splitScreen = screenWidth >= 1024;
   if (options.forceOneTab) splitScreen = false;
   if (player.navTab == 'none') splitScreen = true;
+  // 窄宽度（低于 oneTabWidth）自动进单标签页：
+  // 否则两栏都会渲染，右栏被挤到树的下面，看起来就是点了节点打不开任何界面。
+  // oneTabTree 记住树停在哪一层，供返回按钮用；窗口变宽时恢复。
+  if (!narrow) {
+    if (tmp.other.oneTabTree) { player.navTab = tmp.other.oneTabTree; tmp.other.oneTabTree = null; }
+  } else if (!options.forceOneTab && !tmp.other.oneTabTree && player.navTab !== 'none' && player.tab !== 'none') {
+    tmp.other.oneTabTree = player.navTab;
+    player.navTab = 'none';
+  }
   tmp.other.screenWidth = screenWidth;
   tmp.other.screenHeight = window.innerHeight;
   tmp.other.splitScreen = splitScreen;
