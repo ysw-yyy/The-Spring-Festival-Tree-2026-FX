@@ -2045,11 +2045,13 @@ button.upg.treeThing {
    引擎给这一行外层加了 .challengeCurrent；颜色会从外层继承到"当前: "文本节点
    与内层数值 span，所以一条规则就够。用与奖励同色的金黄，突出"这是奖励现值"。
    ========================================================================== */
+/* "当前"这一行只保留静态发光，不做呼吸（用户要求）：
+   呼吸交给上面的"奖励"行承担，两行同色但一动一静，层次反而更清楚。 */
 .challenge > .challengeCurrent {
   color: #ffcc4d;
   font-weight: 600;
   text-shadow:
     0 0 6px rgba(255, 204, 77, 0.45),
     0 0 14px rgba(255, 204, 77, 0.22);
-  animation: rt-reward-breathe 2.6s ease-in-out infinite;
+  animation: none;
 }
