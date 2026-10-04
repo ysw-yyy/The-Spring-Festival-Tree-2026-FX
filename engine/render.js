@@ -248,7 +248,10 @@ RT.delegation = (function () {
     const id = el.dataset.id;
     switch (actName) {
       // ---- 导航 ----
-      case 'showTab': showTab(el.dataset.target); break;
+      case 'showTab':
+        showTab(el.dataset.target);
+        enterOneTabIfNeeded(el.dataset.target);
+        break;
       case 'showNavTab': showNavTab(el.dataset.target); break;
       case 'goBack': goBack(el.dataset.layer); break;
       case 'subtab': setSubtab(el.dataset.layer, el.dataset.family, el.dataset.id); break;
@@ -290,6 +293,20 @@ RT.delegation = (function () {
     }
   }
 
+  // 非分屏（窄宽度 / 强制单标签）下打开某个标签时：内容整屏显示，同时把树层记下来
+  // 供返回按钮使用。设置 / 说明 / Changelog 这些顶部图标走的是 showTab，
+  // 之前只有"点树节点"那条路径做了这件事，于是窄屏点图标会又渲染成两栏、
+  // 内容被挤到树下面看不见（用户实报"单标签下点不开设置和说明"）。
+  function enterOneTabIfNeeded(target) {
+    if (!target || target === 'none') return;
+    if (tmp.other.splitScreen) return;
+    if (!tmp.other.oneTabTree) {
+      tmp.other.oneTabTree = (typeof layoutInfo !== 'undefined' && layoutInfo && layoutInfo.startNavTab)
+        ? layoutInfo.startNavTab : 'tree-tab';
+    }
+    showNavTab('none');
+  }
+
   function treeNodeClick(layer, prev) {
     if ((shiftDown || player.shitDown) && options.forceTooltips && layer !== 't') {
       player[layer].forceTooltip = !player[layer].forceTooltip;
@@ -301,12 +318,7 @@ RT.delegation = (function () {
         showTab(layer, prev);
         // 非分屏（窄宽度 / 强制单标签）：内容整屏显示，树用返回按钮回去。
         // 不这么做的话节点点了也看不到界面（右栏被挤到树下面）。
-        if (!tmp.other.splitScreen) {
-          // 记住的一定是树层（返回按钮要回到树），而不是当前 navTab 的临时值
-          if (!tmp.other.oneTabTree) tmp.other.oneTabTree = (typeof layoutInfo !== 'undefined' && layoutInfo && layoutInfo.startNavTab)
-            ? layoutInfo.startNavTab : 'tree-tab';
-          showNavTab('none');
-        }
+        enterOneTabIfNeeded(layer);
       }
     } else {
       run(layers[layer].onClick, layers[layer]);
