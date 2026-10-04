@@ -808,3 +808,29 @@ body[data-split="1"] .overlayHead {
    右上角本来就是空的 —— 实测两者不会重叠。移回顶部把空档填掉。 */
 #sideLayers,
 .sideLayers { top: 8px; }
+/* ==========================================================================
+   返回按钮独立定位
+   --------------------------------------------------------------------------
+   .other-back 原来没有任何定位规则，在 overlay 里按普通流排在图标行上，
+   于是和设置/信息/Discord 三个图标重叠（用户实拍）。
+   三个图标的位置是：optionWheel top 6 left 6（46px 高）、info top 6 left 58、
+   discord top 6 left 104（各 40px 高），行底大约 52px —— 所以返回按钮放到
+   下一行（top 60），仍贴左边。
+   ========================================================================== */
+.overlayThing.other-back {
+  position: absolute;
+  left: 6px;
+  top: 60px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
