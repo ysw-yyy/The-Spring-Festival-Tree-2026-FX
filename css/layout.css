@@ -834,3 +834,39 @@ body[data-split="1"] .overlayHead {
   border-radius: var(--radius);
   cursor: pointer;
 }
+/* ==========================================================================
+   手机（窄屏）顶部竖排
+   --------------------------------------------------------------------------
+   实测 390x844：读数条 .overlayHead 是整宽 0..390 × 0..61，而左侧三个图标在
+   y 6..42、右侧 A/T/D 在 y 8..65 —— 全都压在读数条上（用户手机截图里的重叠）。
+   窄屏改成三行竖排：读数条一行；图标与 A/T/D 一行；返回按钮再一行。
+   ========================================================================== */
+@media (max-width: 700px) {
+  .overlayHead {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+
+  .overlayHead h2 {
+    font-size: 20px !important;
+    line-height: 1.15;
+  }
+
+  /* 图标行下移到读数条下面 */
+  #optionWheel,
+  #info,
+  #discord {
+    top: 66px;
+  }
+
+  /* A/T/D 同样下移，贴右侧 */
+  #sideLayers,
+  .sideLayers {
+    top: 64px;
+  }
+
+  /* 返回按钮再下一行 */
+  .overlayThing.other-back {
+    top: 108px;
+  }
+}

@@ -1850,3 +1850,63 @@ button.upg.treeThing {
     0 0 8px rgba(255, 255, 255, 0.55),
     0 0 18px rgba(255, 255, 255, 0.26);
 }
+
+/* ==========================================================================
+   手机（窄屏）卡片尺寸
+   --------------------------------------------------------------------------
+   固定尺寸的卡片在 390px 宽下会互相挤压/重叠（用户手机截图的"跳跃"与成就网格）。
+   窄屏统一缩小：升级格 --upg-size、树上节点 --tree-node、成就与里程碑。
+   ========================================================================== */
+@media (max-width: 700px) {
+  /* A/T/D 的 top 在本文件里写过（I5），文件顺序在 layout.css 之后，
+     所以手机用的下移必须也写在这里，否则会被这里更早的 top: 8px 压掉。 */
+  #sideLayers,
+  .sideLayers {
+    top: 64px;
+  }
+
+  /* 卡片尺寸按视口宽度算：一行必须放得下，否则 .upgRow 会换行，
+     而每行又是居中的 —— 表现就是"错落的网格"（用户手机截图）。
+     按最多 5 列预留（含间距与内边距）：(100vw - 48px) / 5。 */
+  :root {
+    --upg-size: min(104px, calc((100vw - 48px) / 5));
+    --tree-node: min(116px, calc((100vw - 44px) / 4));
+    --ach-size: min(78px, calc((100vw - 48px) / 5));
+  }
+
+  .upg.treeThing,
+  button.upg.treeThing {
+    width: var(--tree-node) !important;
+    height: var(--tree-node) !important;
+  }
+
+  .achievement {
+    width: var(--ach-size);
+    min-height: var(--ach-size);
+  }
+
+  .milestone,
+  .milestoneDone {
+    min-height: 64px;
+  }
+
+  .challenge {
+    width: 220px;
+    min-height: 220px;
+  }
+}
+/* 手机下弹窗收窄：实测站内弹窗在 390px 上几乎整宽、叠三条就把内容盖住了 */
+@media (max-width: 700px) {
+  .popup {
+    width: min(84vw, 320px);
+    padding: 8px 10px;
+  }
+
+  .popup h3 {
+    font-size: 14px;
+  }
+
+  .popup h2 {
+    font-size: 17px;
+  }
+}
