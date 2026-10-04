@@ -1865,13 +1865,22 @@ button.upg.treeThing {
     top: 64px;
   }
 
-  /* 卡片尺寸按视口宽度算：一行必须放得下，否则 .upgRow 会换行，
-     而每行又是居中的 —— 表现就是"错落的网格"（用户手机截图）。
-     按最多 5 列预留（含间距与内边距）：(100vw - 48px) / 5。 */
+  /* 手机下**减少列数**而不是一味压小：
+     升级卡里有标题/说明/当前效果/价格四行字，宽度不够就会挤到卡片外（用户实拍）。
+     所以保留足够的卡片宽度，靠减少列数来适配。 */
+  /* 升级卡文字多但结构固定，3 列 124px 实测 0 溢出；
+     树节点与成就的文字更长，**不能**按列数硬压（实测 22/23 与 50/50 溢出），
+     所以给它们"内容放得下"的尺寸，靠换行适配。 */
   :root {
-    --upg-size: min(104px, calc((100vw - 48px) / 5));
-    --tree-node: min(116px, calc((100vw - 44px) / 4));
-    --ach-size: min(78px, calc((100vw - 48px) / 5));
+    --upg-size: 124px;
+    --tree-node: min(150px, calc((100vw - 40px) / 2));
+    --ach-size: 92px;
+  }
+
+  /* 升级网格固定 3 列（忽略引擎按列数算出来的单元格宽度） */
+  .upgGrid > .upgCell {
+    width: calc((100% - 2 * var(--gap, 6px)) / 3) !important;
+    max-width: none !important;
   }
 
   .upg.treeThing,
