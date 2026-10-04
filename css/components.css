@@ -1829,3 +1829,24 @@ button.upg.treeThing {
   display: block;
   overflow-wrap: anywhere;
 }
+
+
+/* ==========================================================================
+   I25. Buyable 的效果行始终白色高亮
+   --------------------------------------------------------------------------
+   内容层把 buyable 的显示拼成 '效果…<br>价格：…<br>数量：…'，效果行只是
+   第一个 <br> 之前的文本，没有独立元素可选中。这里给显示块加了 .buyableDisplay，
+   用 ::first-line 精确命中第一行（效果行），固定成白色 + 白色柔光，
+   不受层级色、也不受 can/locked/bought 状态影响 —— 即"始终白色"。
+   ========================================================================== */
+.buyable .buyableDisplay {
+  display: block;
+}
+
+.buyable .buyableDisplay::first-line {
+  color: #ffffff !important;
+  font-weight: 600;
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 0.55),
+    0 0 18px rgba(255, 255, 255, 0.26);
+}

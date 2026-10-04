@@ -308,6 +308,8 @@ RT.components = (function () {
     const content = [];
     if (b.title) content.push(h('span', {}, [h('h2', { html: b.title }), h('br')]));
     content.push(h('span', {
+      // 加类名是为了用 ::first-line 命中第一行（即效果行），把它固定成白色高亮
+      class: 'buyableDisplay',
       style: { 'white-space': 'pre-line' },
       html: run(layers[layer].buyables[data].display, layers[layer].buyables[data]),
     }));
