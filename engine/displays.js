@@ -101,6 +101,14 @@ function updateWidth() {
   // oneTabTree 记住树停在哪一层，供返回按钮用；窗口变宽时恢复。
   if (!narrow) {
     if (tmp.other.oneTabTree) { player.navTab = tmp.other.oneTabTree; tmp.other.oneTabTree = null; }
+    // ★ player.navTab 是**存在存档里**的：窄屏时被自动改成 'none' 之后，游戏一自动存档就固定下来，
+    //   于是即使窗口很宽也只剩单栏（用户实报“宽屏双标签没了”）。宽屏下一次性恢复成树。
+    //   只做一次，所以之后用户自己用返回按钮进单标签仍然有效。
+    else if (!tmp.other.oneTabWideFixed && !options.forceOneTab && player.navTab === 'none' && player.tab !== 'none') {
+      tmp.other.oneTabWideFixed = true;
+      // lastSafeTab 本身可能是 'none'（它初始就是 none），所以还要兜底到树层 id
+      player.navTab = (player.lastSafeTab && player.lastSafeTab !== 'none') ? player.lastSafeTab : 'tree-tab';
+    }
   } else if (!options.forceOneTab && !tmp.other.oneTabTree && player.navTab !== 'none' && player.tab !== 'none') {
     tmp.other.oneTabTree = player.navTab;
     player.navTab = 'none';
