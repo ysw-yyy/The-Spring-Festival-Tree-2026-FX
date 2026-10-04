@@ -2000,7 +2000,9 @@ button.upg.treeThing {
    发光用**静态** text-shadow 模板，动画只动 opacity —— 符合工作区那条
    "数值/文字发光必须静态、不要动画 text-shadow" 的红线。
    ========================================================================== */
-.challenge > .challengeDesc {
+/* 只在**挑战进行中**变红：引擎在挑战激活时给卡片加 .resetNotify，
+   平时（挑战外）说明文字保持原来的白色（用户明确要求）。 */
+.challenge.resetNotify > .challengeDesc {
   display: inline-block;
   color: #ff5a52;
   font-weight: 600;
