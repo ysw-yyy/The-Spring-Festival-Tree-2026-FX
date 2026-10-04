@@ -1875,6 +1875,16 @@ button.upg.treeThing {
     --upg-size: 124px;
     --tree-node: min(150px, calc((100vw - 40px) / 2));
     --ach-size: 92px;
+    --challenge-size: min(460px, calc(100vw - 32px));
+  }
+
+  /* 手机上正方形不可能同时满足"边长达标"和"内容放得下"：
+     宽度按视口收窄，高度改为跟随内容（至少一个边长），保证文字不被裁。
+     aspect-ratio 必须一起关掉，否则它会和 min-height 一起把高度锁成正方形。 */
+  .challenge {
+    aspect-ratio: auto !important;
+    height: auto !important;
+    min-height: var(--challenge-size);
   }
 
   /* 升级网格固定 3 列（忽略引擎按列数算出来的单元格宽度） */
@@ -1936,4 +1946,47 @@ button.upg.treeThing {
     max-width: 100% !important;
     box-sizing: border-box;
   }
+}
+
+
+/* ==========================================================================
+   challenge-square：挑战卡正方形 + 去纹理 + 层级色内发光
+   --------------------------------------------------------------------------
+   实测原状：.challenge 是 300x457 的竖长条（内容 455），用户要求正方形。
+   正方形边长取内容放得下的值：宽度变大后文字换行更少，高度会降下来，
+   所以 460 是"内容仍能容纳"的一档（下方验证里会量 scrollHeight 确认）。
+   另外：Exit Early 这类按钮上曾看到斜纹/纹理观感，这里把叠在背景上的纹理层
+   统一清掉（只留单一底色），改用层级色的**向内发光**表达"进行中的挑战"。
+   ========================================================================== */
+.challenge {
+  width: var(--challenge-size, 460px);
+  height: var(--challenge-size, 460px);
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  /* 只保留一层底色：盖掉可能叠上来的斜纹/网格纹理 */
+  background-image: linear-gradient(rgba(4, 7, 16, 0.94), rgba(4, 7, 16, 0.94)) !important;
+  background-blend-mode: normal !important;
+  border-color: color-mix(in srgb, var(--layer-color, #8fd8ff) 55%, var(--rt-line));
+  /* 层级色的向内发光（三层内嵌，和升级卡同一套语言；阴影模板静态） */
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 62%, #ffffff),
+    inset 0 0 26px 6px color-mix(in srgb, var(--layer-color, #8fd8ff) 30%, transparent),
+    inset 0 0 60px 16px color-mix(in srgb, var(--layer-color, #8fd8ff) 14%, transparent) !important;
+}
+
+/* 挑战卡内的按钮：同样只留一层底色，不走纹理 */
+.challenge button {
+  background-image: linear-gradient(rgba(7, 11, 24, 0.88), rgba(7, 11, 24, 0.88)) !important;
+  background-blend-mode: normal !important;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--layer-color, #8fd8ff) 58%, #ffffff),
+    inset 0 0 20px 4px color-mix(in srgb, var(--layer-color, #8fd8ff) 26%, transparent) !important;
+}
+
+/* 伪元素上若挂了纹理（.notify 的斜纹就画在 ::after 上），一并清掉 */
+.challenge::before,
+.challenge::after,
+.challenge button::before,
+.challenge button::after {
+  background-image: none !important;
 }
