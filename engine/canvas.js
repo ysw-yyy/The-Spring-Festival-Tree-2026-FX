@@ -60,38 +60,17 @@ function branchFade(color) {
   return 'rgba(255,255,255,0)';
 }
 
-// 从 (x0,y0) 沿 (x1,y1) 方向走，返回离开矩形时对应的比例（0..1）。
-// 用来算出一段连线被卡片遮住的部分占全长的多少 —— 淡出必须落在可见段里才看得见。
-function exitFraction(rect, x0, y0, x1, y1) {
-  if (!rect) return 0;
-  var dx = x1 - x0, dy = y1 - y0;
-  var tx = Infinity, ty = Infinity;
-  if (dx > 0) tx = (rect.right - x0) / dx;
-  else if (dx < 0) tx = (rect.left - x0) / dx;
-  if (dy > 0) ty = (rect.bottom - y0) / dy;
-  else if (dy < 0) ty = (rect.top - y0) / dy;
-  var f = Math.min(tx, ty);
-  if (!isFinite(f) || f < 0) f = 0;
-  if (f > 1) f = 1;
-  return f;
-}
-
-function branchGrad(color, x1, y1, x2, y2, t0, t1) {
-  var key = color + '|' + Math.round(x1) + ',' + Math.round(y1) + ',' + Math.round(x2) + ',' + Math.round(y2) +
-    '|' + Math.round((t0 || 0) * 100) + ',' + Math.round((t1 === undefined ? 1 : t1) * 100);
+function branchGrad(color, x1, y1, x2, y2) {
+  var key = color + '|' + Math.round(x1) + ',' + Math.round(y1) + ',' + Math.round(x2) + ',' + Math.round(y2);
   var g = branchGradCache.get(key);
   if (g) return g;
   g = ctx.createLinearGradient(x1, y1, x2, y2);
   var soft = branchFade(color);
-  // t0/t1 = 两端被卡片遮住的比例。淡出要越过卡片边缘（多留 RAMP），
-  // 这样连线刚露出来时仍是半透明，肉眼才看得到两端虚化。
-  var RAMP = 0.16;
-  var a = Math.min((t0 || 0) + RAMP, 0.46);
-  var b = Math.max((t1 === undefined ? 1 : t1) - RAMP, 0.54);
-  if (b <= a) { a = 0.4; b = 0.6; }
+  // 与卡片无关：整条线段自身两端渐入渐出，中点最亮。
+  // 这样无论两端埋在多深的卡片下面，露出来的那一段都自带渐变。
+  var PEAK = 0.5;               // 中点达到全亮
   g.addColorStop(0, soft);
-  g.addColorStop(a, color);
-  g.addColorStop(b, color);
+  g.addColorStop(PEAK, color);
   g.addColorStop(1, soft);
   if (branchGradCache.size > 800) branchGradCache.clear();
   branchGradCache.set(key, g);
@@ -200,11 +179,6 @@ function drawTreeBranch(num1, data, prefix) {
 
   const start = el1.getBoundingClientRect();
   const end = el2.getBoundingClientRect();
-  // 连线是中心到中心，两端各有一段埋在卡片下面，先算出来
-  const _cx1 = start.left + start.width / 2, _cy1 = start.top + start.height / 2;
-  const _cx2 = end.left + end.width / 2, _cy2 = end.top + end.height / 2;
-  const t0 = exitFraction(start, _cx1, _cy1, _cx2, _cy2);
-  const t1 = 1 - exitFraction(end, _cx2, _cy2, _cx1, _cy1);
   const x1 = start.left + start.width / 2 + window.scrollX;
   const y1 = start.top + start.height / 2 + window.scrollY;
   const x2 = end.left + end.width / 2 + window.scrollX;
@@ -218,7 +192,7 @@ function drawTreeBranch(num1, data, prefix) {
     ctx.setLineDash(dash || []);
     ctx.lineDashOffset = offset || 0;
     ctx.lineWidth = w;
-    ctx.strokeStyle = branchGrad(style, x1, y1, x2, y2, t0, t1);
+    ctx.strokeStyle = branchGrad(style, x1, y1, x2, y2);
     ctx.shadowBlur = glow || 0;
     ctx.shadowColor = glowColor || 'transparent';
     ctx.globalAlpha = alpha === undefined ? 1 : alpha;
