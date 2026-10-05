@@ -295,17 +295,19 @@ RT.system = (function () {
   // （实测：用真实点击切换后属性是 ""，卡片照旧显示；用 setSubtab() 直接切
   //   恰好连带重渲染了外壳，所以之前"验过了"，与用户所见不一致）。
   function syncSubtabAttrs() {
+    // ★ 以『最后一次点击的子标签』为准（RT.currentSubtab，由 render.js 的动作记录）。
+    // 试过两条都不行：player.subtabs 的两个族点击后停在旧值；子标签按钮也不在
+    // 内容容器内（在它上方），容器内查不到高亮按钮。
+    const cur = RT.currentSubtab;
     const tc = document.getElementById('tabContent');
     if (tc) {
-      // 注意：leftLayer 只是外壳构建函数里的局部变量，update() 里取不到 ——
-      // 这里用同一个表达式本地算一次（原写法导致每拍 ReferenceError，冒烟从 21/21 掉到 13/21）。
       const ll = player.navTab === 'none' ? player.tab : player.navTab;
-      const v = (player.subtabs && player.subtabs[ll] && player.subtabs[ll].tabFormat) || '';
+      const v = (cur && cur.layer === ll ? cur.id : '') || '';
       if (tc.getAttribute('data-subtab') !== v) tc.setAttribute('data-subtab', v);
     }
     const rc = document.getElementById('rightContent');
     if (rc) {
-      const v2 = (player.subtabs && player.subtabs[player.tab] && player.subtabs[player.tab].tabFormat) || '';
+      const v2 = (cur && cur.layer === player.tab ? cur.id : '') || '';
       if (rc.getAttribute('data-subtab') !== v2) rc.setAttribute('data-subtab', v2);
     }
   }

@@ -254,7 +254,12 @@ RT.delegation = (function () {
         break;
       case 'showNavTab': showNavTab(el.dataset.target); break;
       case 'goBack': goBack(el.dataset.layer); break;
-      case 'subtab': setSubtab(el.dataset.layer, el.dataset.family, el.dataset.id); break;
+      case 'subtab':
+        // 记录当前子标签：data-subtab 需要它（player.subtabs 的族名不固定，
+        // 实测点击后两个族都停在旧值，猜不出来就只能记）。
+        RT.currentSubtab = { layer: el.dataset.layer, family: el.dataset.family, id: el.dataset.id };
+        setSubtab(el.dataset.layer, el.dataset.family, el.dataset.id);
+        break;
       case 'treeNode':
         treeNodeClick(layer, el.dataset.prev || undefined);
         break;
@@ -712,3 +717,27 @@ RT.smoothNumbers = (function () {
     };
   })();
 
+  // ---- 『已永久』卡片标记 ---------------------------------------------------
+  // 产能增益页里被永久化的增益卡是**纯 div、无类名**（内容层自定义 HTML），
+  // CSS 也没法按文字选择，所以这里扫一遍：找到文字恰为『已永久』的叶子节点，
+  // 往上取两级 div（实测链条 span → div → div 就是那张卡），打上 .rt-permanent；
+  // 金色发光样式写在 components.css 的 I47。
+  RT.permGlow = (function () {
+    let timer = null;
+    function scan() {
+      const nodes = document.querySelectorAll('span, div');
+      for (let i = 0; i < nodes.length; i++) {
+        const el = nodes[i];
+        if (el.children.length) continue;
+        if ((el.textContent || '').trim() !== '\u5df2\u6c38\u4e45') continue;
+        let card = el;
+        for (let up = 0; up < 2 && card.parentElement; up++) card = card.parentElement;
+        if (card && !card.classList.contains('rt-permanent')) card.classList.add('rt-permanent');
+      }
+    }
+    return {
+      start() { if (timer === null) timer = setInterval(scan, 800); scan(); },
+      stop() { if (timer !== null) { clearInterval(timer); timer = null; } },
+      scan: scan,
+    };
+  })();
