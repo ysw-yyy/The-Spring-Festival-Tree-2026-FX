@@ -297,7 +297,10 @@ RT.system = (function () {
   function syncSubtabAttrs() {
     const tc = document.getElementById('tabContent');
     if (tc) {
-      const v = (player.subtabs && player.subtabs[leftLayer] && player.subtabs[leftLayer].tabFormat) || '';
+      // 注意：leftLayer 只是外壳构建函数里的局部变量，update() 里取不到 ——
+      // 这里用同一个表达式本地算一次（原写法导致每拍 ReferenceError，冒烟从 21/21 掉到 13/21）。
+      const ll = player.navTab === 'none' ? player.tab : player.navTab;
+      const v = (player.subtabs && player.subtabs[ll] && player.subtabs[ll].tabFormat) || '';
       if (tc.getAttribute('data-subtab') !== v) tc.setAttribute('data-subtab', v);
     }
     const rc = document.getElementById('rightContent');
