@@ -2564,14 +2564,15 @@ body,
    --------------------------------------------------------------------------
    实测：rifts 的升级卡是 138x138（aspect-ratio 1/1 + --upg-size 138px），
    而卡内内容只有 77px —— **61px 全是空的**；内容更长的卡则顶出边框（用户实报快超出）。
-   改为自动高度后：空隙消失，也不再溢出。行容器是 align-items: flex-start，
-   所以每张卡各按自身内容定高，不会被邻居拉高（不会重新产生空隙）。
+
+   用户最终意见：『同意正方形，只要能塞下就可以』—— aspect-ratio 1/1 定正方形，
+   min-height 用 fit-content：塞得下就是正方形，内容实在更高时才往下长。
    ========================================================================== */
 .upg,
 .upgCell > .upg,
 .upgGrid > .upgCell > .upg,
 .upgAlign > .upg {
-  aspect-ratio: auto !important;
+  aspect-ratio: 1 / 1 !important;
   height: auto !important;
-  min-height: 0 !important;
+  min-height: fit-content !important;
 }
