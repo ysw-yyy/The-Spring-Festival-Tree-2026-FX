@@ -633,6 +633,15 @@ RT.smoothNumbers = (function () {
     let timer = null;
     const last = new WeakMap();    // 元素 -> { v, t } 上次等级与时间
     const shown = new WeakMap();   // 元素 -> 进入快速态的时长基准
+    // 从 .fill 的同级元素里找 .barBG（两者是兄弟：.overlayTextContainer / .barBG / .fill）
+    function barBGSibling(fill) {
+      if (!fill || !fill.parentElement) return null;
+      const kids = fill.parentElement.children;
+      for (let i = 0; i < kids.length; i++) {
+        if (kids[i].classList && kids[i].classList.contains('barBG')) return kids[i];
+      }
+      return null;
+    }
     function levelOf(wrap) {
       const t = wrap.querySelector('.overlayTextContainer') || wrap;
       const m = /等级\s*[:：]\s*([\d.,]+)/.exec(t.textContent || '');
@@ -664,12 +673,20 @@ RT.smoothNumbers = (function () {
             if (col && col !== 'rgba(0, 0, 0, 0)') wrap.style.setProperty('--rt-bar-color', col);
           }
           wrap.classList.add('rt-bar-fast');
-          if (fill) fill.classList.add('rt-bar-fast');   // 类直接落在 .fill 上：不依赖 .fill 是否在 .barWrap 之内
+          // 类同时加到 .fill 与 .barBG：
+          //   .fill  → 只用来把纯色条去掉；
+          //   .barBG → 条纹画在它上面，宽度是整条（用户要求"铺满整个能量条"）。
+          // 直接找 .fill 的同级 .barBG，不依赖 .barWrap 的祖先关系（踩过坑）。
+          const bgEl = barBGSibling(fill);
+          if (fill) fill.classList.add('rt-bar-fast');
+          if (bgEl) bgEl.classList.add('rt-bar-fast');
         } else if (wrap.classList.contains('rt-bar-fast')) {
           if (now - (shown.get(wrap) || 0) > hold) {
             wrap.classList.remove('rt-bar-fast');
             const f2 = wrap.querySelector('.fill');
             if (f2) f2.classList.remove('rt-bar-fast');
+            const b2 = barBGSibling(f2);
+            if (b2) b2.classList.remove('rt-bar-fast');
           }
         }
       }
@@ -688,6 +705,8 @@ RT.smoothNumbers = (function () {
         shown.set(el, performance.now() - (holdMs || 0));
         el.classList.add('rt-bar-fast');
         if (fill) fill.classList.add('rt-bar-fast');
+        const bgEl2 = barBGSibling(fill);
+        if (bgEl2) bgEl2.classList.add('rt-bar-fast');
         return true;
       }
     };

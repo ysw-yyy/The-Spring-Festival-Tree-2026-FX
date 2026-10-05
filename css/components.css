@@ -2383,15 +2383,23 @@ body,
      只有 !important 压得住）。
    - 动画在 .fill 上：位移取条纹 x 轴周期 12.73px（135° 下 9px/cos45°），无缝循环。
    ========================================================================== */
-.barWrap.rt-bar-fast .fill,
-.fill.rt-bar-fast {
-  background-color: transparent !important;
+/* 条纹画在**底槽**上 → 宽度是整条，铺满整个能量条（用户要求）。 */
+.barWrap.rt-bar-fast .barBG,
+.barBG.rt-bar-fast {
   background-image: repeating-linear-gradient(
     135deg,
     var(--rt-bar-color, currentColor) 0 3px,
     color-mix(in srgb, var(--rt-bar-color, currentColor) 42%, transparent) 3px 9px
   ) !important;
   animation: rt-bar-stripes-right 0.9s linear infinite;
+}
+
+/* 填充层：去掉原来的纯色条，让底槽的条纹透出来 */
+.barWrap.rt-bar-fast .fill,
+.fill.rt-bar-fast {
+  background-color: transparent !important;
+  background-image: none !important;
+  animation: none !important;
 }
 
 @keyframes rt-bar-stripes-right {
