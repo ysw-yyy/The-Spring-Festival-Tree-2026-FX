@@ -169,7 +169,7 @@ RT.config = {
       enabled: true,
       intervalMs: 250,   // 扫描间隔
       windowMs: 1000,    // 折算基准（每秒）
-      minGain: 1,        // 每秒 >= 1 级算快
+      minGain: 10,        // 每秒 >= 1 级算快
       holdMs: 1500       // 掉速后保持多久
     },
     branchDashSpeed: 1.6,   // 每帧推进的偏移量（30fps 下约 48px/秒）
