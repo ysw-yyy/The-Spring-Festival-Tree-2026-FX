@@ -19,12 +19,13 @@ RT.system = (function () {
   function overlayHead() {
     const kids = [];
     if (player.devSpeed && player.devSpeed != 1) {
-      kids.push(h('span', { class: 'overlayThing' }, [h('br'), text('全局速率: ' + format(player.devSpeed) + 'x'), h('br')]));
+      kids.push(h('span', { class: 'overlayThing devSpeedLine' }, [text('全局速率: ' + format(player.devSpeed) + 'x'), h('br')]));
     }
     if (player.offTime !== undefined) {
-      kids.push(h('span', { class: 'overlayThing' }, [h('br'), text('Offline Time: ' + formatTime(player.offTime.remain)), h('br')]));
+      kids.push(h('span', { class: 'overlayThing' }, [text('Offline Time: ' + formatTime(player.offTime.remain)), h('br')]));
     }
-    kids.push(h('br'));
+    // 这里原本还有一个 kids.push(h('br'))：上一行的 span 自带收尾 <br>，
+    // 于是两行之间出现两条空行（用户圈出的空隙）。去掉它，只留一条。
     if (player.points.lt('1e1000')) kids.push(h('span', { class: 'overlayThing' }, [text('你有 ')]));
     kids.push(h('h2', { class: 'overlayThing', attrs: { id: 'points', 'data-sm': 'head' } }, [text(format(player.points))]));
     if (player.points.lt('1e1e6')) kids.push(h('span', { class: 'overlayThing' }, [text(' ' + modInfo.pointsName)]));
