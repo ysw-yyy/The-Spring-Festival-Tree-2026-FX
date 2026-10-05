@@ -750,7 +750,9 @@ RT.smoothNumbers = (function () {
   // （见 boot.js：RT.system.update() 之后立刻 scan()），画出来的第一帧就有色。
   RT.rarityGlow = (function () {
     const WORDS = { '普通': 'rt-r-common', '稀有': 'rt-r-rare', '史诗': 'rt-r-epic', '传说': 'rt-r-legend' };
-    const RE = /(普通|稀有|史诗|传说)/g;
+    // 带上可选方括号：把 "[普通]" 整组当作一个单位，否则断行会发生在 '[' 与我的 span 之间
+    // （实测 "[普" / "通]" 被拆开）。
+    const RE = /(\[?(?:普通|稀有|史诗|传说)\]?)/g;
     let timer = null;
 
     function skipNow() {
@@ -790,7 +792,8 @@ RT.smoothNumbers = (function () {
         while ((m = RE.exec(text)) !== null) {
           if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
           const span = document.createElement('span');
-          span.className = 'rt-rarity ' + WORDS[m[1]];
+          const bare = m[1].replace(/[\[\]]/g, '');
+          span.className = 'rt-rarity ' + WORDS[bare];
           span.textContent = m[1];
           frag.appendChild(span);
           last = m.index + m[1].length;
