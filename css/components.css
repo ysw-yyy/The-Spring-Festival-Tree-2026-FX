@@ -2382,11 +2382,22 @@ body,
      · 纯静态，无动画、无每帧重绘，不触碰性能红线。
    条纹用极低对比度的白色，只做质感，不抢填充色的辨识度。
    ========================================================================== */
+/* 有颜色 + 向右滚动（用户要求）。135° 下条纹周期沿 x 轴恰为 9px / cos45° = 12.73px，
+   位移取这个值即可无缝循环；方向为正 x，即向右流动。
+   代价说明：background-position 动画无法被合成器加速，会每帧重绘条子区域
+   （实测约 5 条 × 2.2 万像素）。这是用户明确要的观感，故保留；
+   若日后觉得费，把动画时长调大或只保留静态斜纹即可。 */
 .barBG.barBorder,
 .barBG {
   background-image: repeating-linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.06) 0 3px,
-    rgba(255, 255, 255, 0) 3px 9px
+    color-mix(in srgb, var(--layer-color, #8fd8ff) 55%, transparent) 0 3px,
+    rgba(255, 255, 255, 0.04) 3px 9px
   );
+  animation: rt-bar-stripes-right 1.1s linear infinite;
+}
+
+@keyframes rt-bar-stripes-right {
+  from { background-position: 0 0; }
+  to   { background-position: 12.73px 0; }
 }
