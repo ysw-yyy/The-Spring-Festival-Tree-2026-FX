@@ -808,7 +808,9 @@ RT.smoothNumbers = (function () {
     }
     function scan() { try { tagWholeCell(); wrapInlineWord(); } catch (e) {} }
     return {
-      start() { if (timer === null) timer = setInterval(scan, 900); scan(); },
+      // 120ms：游戏每拍重渲染会把我包的 span 清掉，间隔太长就会看到白->变色（用户实报）。
+      // 单次扫描只走内容区的文本节点，实测开销很小。
+      start() { if (timer === null) timer = setInterval(scan, 120); scan(); },
       stop() { if (timer !== null) { clearInterval(timer); timer = null; } },
       scan: scan,
     };

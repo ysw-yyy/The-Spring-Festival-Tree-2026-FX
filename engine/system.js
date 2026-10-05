@@ -304,6 +304,7 @@ RT.system = (function () {
       const ll = player.navTab === 'none' ? player.tab : player.navTab;
       const v = (cur && cur.layer === ll ? cur.id : '') || '';
       if (tc.getAttribute('data-subtab') !== v) tc.setAttribute('data-subtab', v);
+      if (tc.getAttribute('data-subtab') !== v && RT.rarityGlow) RT.rarityGlow.scan();
     }
     const rc = document.getElementById('rightContent');
     if (rc) {
