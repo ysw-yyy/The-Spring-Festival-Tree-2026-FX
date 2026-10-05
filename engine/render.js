@@ -506,7 +506,14 @@ RT.smoothNumbers = (function () {
           st.target = t;
         }
       }
-      if (!st.target || !st.cur || !st.shape) continue;
+      if (!st.target || !st.cur || !st.shape) {
+        // ★ 解析不了就**直接显示引擎给的原文**，不要 continue：
+        //   >=1e1000000 用的是省略尾数的记法（"e1,018,891"），平滑模块解析不出来，
+        //   原来会停在这个分支 —— 元素于是**停在旧文本**上永不更新
+        //   （用户实报"1e1000000 以上无法显示"：所有数值都显示同一个数）。
+        if (el.textContent !== st.text) el.textContent = st.text;
+        continue;
+      }
       // ★ 目标"跳变"就直接贴合，不要滚：
       //   切标签时元素是**复用**的（同一个 DOM 节点换了内容），上一页是 1e20、这一页是四千多，
       //   滚起来中间会显示成 4236:205 这种四不像（用户实拍报过）。
