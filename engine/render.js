@@ -741,3 +741,75 @@ RT.smoothNumbers = (function () {
       scan: scan,
     };
   })();
+
+  // ---- 稀有度词发光 ---------------------------------------------------------
+  // 三处都是内容层的自定义 HTML：已解锁列表/候选列表里的『[普通]』『[稀有]』标签，
+  // 以及『普通结晶: 36.34』『普通☆永久化』这种**词嵌在长句里**的。
+  // 前一种整格就是稀有度，直接打类；后一种 CSS 选不中（不能按文字匹配），
+  // 所以只把这个词单独包一层 span 再上色 —— 词本身是静态的（稀有度不会变），
+  // 即使游戏每 tick 重写行内数字也不影响。
+  RT.rarityGlow = (function () {
+    const WORDS = ['传说', '史诗', '稀有', '普通'];      // 长的在前
+    const CLS = { '普通': 'rt-r-common', '稀有': 'rt-r-rare', '史诗': 'rt-r-epic', '传说': 'rt-r-legend' };
+    let timer = null;
+    function hosts() {
+      const out = [];
+      const a = document.getElementById('tabContent');
+      const b = document.getElementById('rightContent');
+      if (a) out.push(a);
+      if (b) out.push(b);
+      return out.length ? out : [document.body];
+    }
+    function tagWholeCell() {
+      hosts().forEach(function (host) {
+        const all = host.querySelectorAll('span, div, b, p');
+        for (let i = 0; i < all.length; i++) {
+          const e = all[i];
+          if (e.children.length) continue;
+          const t = (e.textContent || '').trim();
+          const m = /^\[?(普通|稀有|史诗|传说)\]?$/.exec(t);
+          if (m && !e.classList.contains('rt-rarity')) {
+            e.classList.add('rt-rarity', CLS[m[1]]);
+          }
+        }
+      });
+    }
+    function wrapInlineWord() {
+      hosts().forEach(function (host) {
+        const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null);
+        const jobs = [];
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          const s = node.nodeValue || '';
+          if (!s) continue;
+          const pe = node.parentElement;
+          if (pe && (pe.classList.contains('rt-rarity') || pe.id === 'points')) continue;
+          // 只在"稀有度词 + 结晶/永久化"这种明确语境里包，避免误伤普通叙述文字
+          if (/(普通|稀有|史诗|传说)(?=结晶|永久化|\])/.test(s)) jobs.push(node);
+        }
+        jobs.forEach(function (node) {
+          const s = node.nodeValue || '';
+          const re = /(普通|稀有|史诗|传说)(?=结晶|永久化|\])/g;
+          const frag = document.createDocumentFragment();
+          let last = 0, m;
+          while ((m = re.exec(s)) !== null) {
+            if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+            const span = document.createElement('span');
+            span.className = 'rt-rarity ' + CLS[m[1]];
+            span.textContent = m[1];
+            frag.appendChild(span);
+            last = m.index + m[1].length;
+          }
+          if (last === 0) return;
+          if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+          if (node.parentNode) node.parentNode.replaceChild(frag, node);
+        });
+      });
+    }
+    function scan() { try { tagWholeCell(); wrapInlineWord(); } catch (e) {} }
+    return {
+      start() { if (timer === null) timer = setInterval(scan, 900); scan(); },
+      stop() { if (timer !== null) { clearInterval(timer); timer = null; } },
+      scan: scan,
+    };
+  })();

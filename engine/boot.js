@@ -176,6 +176,7 @@ RT.boot = async function () {
   RT.boughtFlash.start();
   if (RT.fastBars) RT.fastBars.start();
   if (RT.permGlow) RT.permGlow.start();
+  if (RT.rarityGlow) RT.rarityGlow.start();
   // 画布是 fixed 的，滚动容器时若不立即重绘，连线会明显滞后
   if (RT.canvas.attachScroll) RT.canvas.attachScroll();
     } catch (e) { RT.error('启动数字平滑失败: ' + e.message); }

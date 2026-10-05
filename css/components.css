@@ -2497,3 +2497,20 @@ body,
     0 0 8px rgba(255, 204, 77, 0.55),
     0 0 18px rgba(255, 204, 77, 0.28);
 }
+
+
+/* ==========================================================================
+   I48. 稀有度词发光（普通 / 稀有 / 史诗 / 传说）
+   --------------------------------------------------------------------------
+   颜色沿用游戏自身的稀有度配色倾向：普通＝灰白、稀有＝蓝、史诗＝紫、传说＝金。
+   词由 render.js 的 RT.rarityGlow 包裹成 .rt-rarity + 对应类。
+   静态 text-shadow（这些行每 tick 重写数字，动画会被打断）。
+   ========================================================================== */
+.rt-rarity { font-weight: 600; }
+/* ★ !important 是必需的：永久卡的 .rt-permanent span 会给整行套金色，
+   特异性 (0,1,1) 高于 .rt-r-* 的 (0,1,0) —— 不加的话这些词会被染成金色，
+   失去稀有度区分（用户要求『按对应颜色发光』）。 */
+.rt-r-common { color: #d8dee9 !important; text-shadow: 0 0 7px rgba(216, 222, 233, 0.55) !important; }
+.rt-r-rare   { color: #6fa8ff !important; text-shadow: 0 0 8px rgba(111, 168, 255, 0.65) !important; }
+.rt-r-epic   { color: #c084ff !important; text-shadow: 0 0 8px rgba(192, 132, 255, 0.65) !important; }
+.rt-r-legend { color: #ffcc4d !important; text-shadow: 0 0 9px rgba(255, 204, 77, 0.70) !important; }
