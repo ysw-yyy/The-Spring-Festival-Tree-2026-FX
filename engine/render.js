@@ -422,6 +422,10 @@ RT.smoothNumbers = (function () {
   // 用尾数/指数分开表示，1e1000 这种超出 float 范围的值也能平滑（插值在对数空间做）。
   function parse(text) {
     const s = String(text).replace(/,/g, '').trim();
+    // 无尾数记法（>=1e1000000 时引擎输出 "e1,018,891"）——去掉逗号后就是 "e1018891"，
+    // 原来的正则要求 e 前面有数字，于是解析失败、元素停在旧文本上永不更新。
+    const only = /^([+-]?)e([+-]?\d+)$/i.exec(s);
+    if (only) return { m: 1, e: parseInt(only[2], 10) };
     const m = /^([+-]?\d*\.?\d+)(?:e([+-]?\d+))?$/i.exec(s);
     if (!m) return null;
     const mant = parseFloat(m[1]);
@@ -436,6 +440,9 @@ RT.smoothNumbers = (function () {
   // 目标文本的"形状"：指数形式几位小数 / 普通形式几位小数 / 有无千分位
   function shapeOf(text) {
     const s = String(text);
+    // 无尾数记法：e1,018,891 → { exp:true, noMantissa:true }
+    const only = /^([+-]?)e([+-]?\d+)$/i.exec(s.replace(/,/g, ''));
+    if (only) return { exp: true, noMantissa: true, dec: 0, expDigits: String(only[2]).replace(/[+-]/, '').length, sign: only[1] };
     const ex = /^([+-]?)(\d+(?:\.(\d+))?)e([+-]?\d+)$/i.exec(s.replace(/,/g, ''));
     if (ex) return { exp: true, dec: ex[3] ? ex[3].length : 0, expDigits: String(ex[4]).replace(/[+-]/, '').length, sign: ex[1] };
     const pl = /^([+-]?)(\d+(?:\.(\d+))?)$/.exec(s.replace(/,/g, ''));
@@ -447,6 +454,13 @@ RT.smoothNumbers = (function () {
     const dec = shape.dec + extra;
     if (shape.exp) {
       let m = v.m, e = v.e;
+      // 无尾数记法：只显示指数（归一化后丢掉尾数），与引擎输出保持一致
+      if (shape.noMantissa) {
+        while (Math.abs(m) >= 10) { m /= 10; e += 1; }
+        while (Math.abs(m) < 1 && m !== 0) { m *= 10; e -= 1; }
+        const eStr0 = (typeof commaFormat === 'function') ? commaFormat(new Decimal(e), 0) : String(e);
+        return shape.sign + 'e' + eStr0;
+      }
       if (Math.abs(m) >= 10) { m /= 10; e += 1; }
       if (Math.abs(m) < 1 && m !== 0) { m *= 10; e -= 1; }
       // ★ 进位必须在**四舍五入之后**再判一次：m = 9.6、dec = 0 时上面的
