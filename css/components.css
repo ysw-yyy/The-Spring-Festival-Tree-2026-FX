@@ -2372,29 +2372,26 @@ body,
   opacity: 0.85;
 }
 /* ==========================================================================
-   I41. 能量条底槽改成斜纹
+   /* I41/I42 已撤销：常驻斜纹理解错了用户意图，改为"等级涨得快时才显示"，见 I43。 */
+/* ==========================================================================
+   I43. 能量条"快速成长"态：染色斜纹 + 向右流动
    --------------------------------------------------------------------------
-   用户要求"背景变成斜纹"（原话），即**未填充部分**做出斜纹质感。
-   为什么这里可以安全用 repeating-linear-gradient：
-     · .barBG 是**静态、整幅宽度**的底槽，可见范围不随进度变化；
-       （对比 .fill：它的可见范围被 clip-path 裁切，横向渐变会随进度改变明暗，
-        那是第五轮踩过的坑，所以 .fill 上只用垂直渐变/纯色。）
-     · 纯静态，无动画、无每帧重绘，不触碰性能红线。
-   条纹用极低对比度的白色，只做质感，不抢填充色的辨识度。
+   用户要求：等级涨得快的时候才这样显示，慢下来恢复原样。
+   - 颜色：JS 从**该条自己的填充色**读出来写进 --rt-bar-color（"染成对应的颜色"），
+     而不是用层级色（那样每条都一样，认不出是哪一条）。
+   - 去掉原来的色条：background-color 置透明 + !important（填充色是内联样式，
+     只有 !important 压得住）。
+   - 动画在 .fill 上：位移取条纹 x 轴周期 12.73px（135° 下 9px/cos45°），无缝循环。
    ========================================================================== */
-/* 有颜色 + 向右滚动（用户要求）。135° 下条纹周期沿 x 轴恰为 9px / cos45° = 12.73px，
-   位移取这个值即可无缝循环；方向为正 x，即向右流动。
-   代价说明：background-position 动画无法被合成器加速，会每帧重绘条子区域
-   （实测约 5 条 × 2.2 万像素）。这是用户明确要的观感，故保留；
-   若日后觉得费，把动画时长调大或只保留静态斜纹即可。 */
-.barBG.barBorder,
-.barBG {
+.barWrap.rt-bar-fast .fill,
+.fill.rt-bar-fast {
+  background-color: transparent !important;
   background-image: repeating-linear-gradient(
     135deg,
-    color-mix(in srgb, var(--layer-color, #8fd8ff) 55%, transparent) 0 3px,
-    rgba(255, 255, 255, 0.04) 3px 9px
-  );
-  animation: rt-bar-stripes-right 1.1s linear infinite;
+    var(--rt-bar-color, currentColor) 0 3px,
+    color-mix(in srgb, var(--rt-bar-color, currentColor) 42%, transparent) 3px 9px
+  ) !important;
+  animation: rt-bar-stripes-right 0.9s linear infinite;
 }
 
 @keyframes rt-bar-stripes-right {

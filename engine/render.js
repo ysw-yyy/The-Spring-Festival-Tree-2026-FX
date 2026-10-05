@@ -622,3 +622,74 @@ RT.smoothNumbers = (function () {
 
     return { start: start, stop: stop, scan: scan };
   })();
+
+  // ---- 能量条"快速成长"判定 ------------------------------------------------
+  // 用户要求：等级涨得快时才把填充换成染色斜纹（并去掉纯色条），慢下来恢复。
+  // 这里只做**状态判定**，视觉全在 CSS（components.css 的 I43）。
+  // 等级从条内文字读（"等级:498.91"），而不是猜游戏内部字段 —— 文字就是玩家看到的，
+  // 阈值也按玩家感知定；每 250ms 扫一次、最多 8 条，开销可忽略。
+  RT.fastBars = (function () {
+    const cfg = () => (RT.config.ui && RT.config.ui.fastBars) || {};
+    let timer = null;
+    const last = new WeakMap();    // 元素 -> { v, t } 上次等级与时间
+    const shown = new WeakMap();   // 元素 -> 进入快速态的时长基准
+    function levelOf(wrap) {
+      const t = wrap.querySelector('.overlayTextContainer') || wrap;
+      const m = /等级\s*[:：]\s*([\d.,]+)/.exec(t.textContent || '');
+      if (!m) return null;
+      const v = parseFloat(m[1].replace(/,/g, ''));
+      return isNaN(v) ? null : v;
+    }
+    function scan() {
+      const c = cfg();
+      if (c.enabled === false) return;
+      const win = c.windowMs || 1000;      // 折算成"每秒涨多少级"的窗口
+      const minGain = c.minGain || 1;      // 每秒涨 >= 1 级算快
+      const hold = c.holdMs || 1500;       // 掉速后再保持多久才恢复
+      const now = performance.now();
+      const wraps = document.querySelectorAll('.barWrap');
+      for (let i = 0; i < wraps.length; i++) {
+        const wrap = wraps[i];
+        const lv = levelOf(wrap);
+        if (lv === null) continue;
+        const prev = last.get(wrap);
+        last.set(wrap, { v: lv, t: now });
+        let gain = null;
+        if (prev && now > prev.t) gain = (lv - prev.v) / (now - prev.t) * win;
+        if (gain !== null && gain >= minGain) {
+          shown.set(wrap, now);
+          const fill = wrap.querySelector('.fill');
+          if (fill) {
+            const col = getComputedStyle(fill).backgroundColor;
+            if (col && col !== 'rgba(0, 0, 0, 0)') wrap.style.setProperty('--rt-bar-color', col);
+          }
+          wrap.classList.add('rt-bar-fast');
+          if (fill) fill.classList.add('rt-bar-fast');   // 类直接落在 .fill 上：不依赖 .fill 是否在 .barWrap 之内
+        } else if (wrap.classList.contains('rt-bar-fast')) {
+          if (now - (shown.get(wrap) || 0) > hold) {
+            wrap.classList.remove('rt-bar-fast');
+            const f2 = wrap.querySelector('.fill');
+            if (f2) f2.classList.remove('rt-bar-fast');
+          }
+        }
+      }
+    }
+    return {
+      start() { if (timer === null) timer = setInterval(scan, (cfg().intervalMs || 250)); },
+      stop() { if (timer !== null) { clearInterval(timer); timer = null; } },
+      scan: scan,
+      // 手动标记（测试 / 调试用）：走与自动判定完全相同的视觉路径
+      mark(el, holdMs) {
+        const fill = el.querySelector ? el.querySelector('.fill') : null;
+        if (fill) {
+          const col = getComputedStyle(fill).backgroundColor;
+          if (col) el.style.setProperty('--rt-bar-color', col);
+        }
+        shown.set(el, performance.now() - (holdMs || 0));
+        el.classList.add('rt-bar-fast');
+        if (fill) fill.classList.add('rt-bar-fast');
+        return true;
+      }
+    };
+  })();
+

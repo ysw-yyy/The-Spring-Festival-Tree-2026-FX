@@ -174,6 +174,7 @@ RT.boot = async function () {
       RT.smoothNumbers.start();
   // 购买闪光：边沿触发，切页面/重渲染都不会重播
   RT.boughtFlash.start();
+  if (RT.fastBars) RT.fastBars.start();
   // 画布是 fixed 的，滚动容器时若不立即重绘，连线会明显滞后
   if (RT.canvas.attachScroll) RT.canvas.attachScroll();
     } catch (e) { RT.error('启动数字平滑失败: ' + e.message); }
