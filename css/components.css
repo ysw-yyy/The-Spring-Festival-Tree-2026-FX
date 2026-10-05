@@ -2541,13 +2541,37 @@ body,
   line-height: 1.18;
 }
 
+/* 卡内那两个 <br> 各占一整行（实测 15px x2 = 30px/卡），而卡内各段本来就是
+   display:block（自带换行）—— 所以 <br> 只贡献空行。压成 0 高：保留断行结构，
+   去掉空行高度。实测卡高 138 -> 108 左右。 */
+/* <br> 的空行高度取自**父级**行高，给 br 自己设 line-height 无效（实测卡高仍 138）。
+   而卡内各段本来就是 display:block（自带换行），这些 <br> 只贡献空行 —— 直接隐藏。
+   实测每卡省下约 30px。 */
 .upg br,
-.upgBig br {
-  line-height: 1.05;
+.upgBig br,
+.longUpg br {
+  display: none;
 }
 
 .upg,
 .buyable {
   padding-top: 4px;
   padding-bottom: 4px;
+}
+
+/* ==========================================================================
+   I51. 升级卡高度跟内容（原来的固定 1:1 产生空隙、且内容多的卡会溢出）
+   --------------------------------------------------------------------------
+   实测：rifts 的升级卡是 138x138（aspect-ratio 1/1 + --upg-size 138px），
+   而卡内内容只有 77px —— **61px 全是空的**；内容更长的卡则顶出边框（用户实报快超出）。
+   改为自动高度后：空隙消失，也不再溢出。行容器是 align-items: flex-start，
+   所以每张卡各按自身内容定高，不会被邻居拉高（不会重新产生空隙）。
+   ========================================================================== */
+.upg,
+.upgCell > .upg,
+.upgGrid > .upgCell > .upg,
+.upgAlign > .upg {
+  aspect-ratio: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
