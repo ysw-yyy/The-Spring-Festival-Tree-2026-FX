@@ -289,7 +289,26 @@ RT.system = (function () {
 
   let container = null;
 
+  // 把当前子标签写进栏容器的 data-subtab，**每拍同步**。
+  // 为什么不能只在建外壳时写：外壳的 vdom 不会因为"切子标签"而重渲染，
+  // 属性会停在空值/旧值上 —— 于是所有靠 [data-subtab=...] 的规则静默失效
+  // （实测：用真实点击切换后属性是 ""，卡片照旧显示；用 setSubtab() 直接切
+  //   恰好连带重渲染了外壳，所以之前"验过了"，与用户所见不一致）。
+  function syncSubtabAttrs() {
+    const tc = document.getElementById('tabContent');
+    if (tc) {
+      const v = (player.subtabs && player.subtabs[leftLayer] && player.subtabs[leftLayer].tabFormat) || '';
+      if (tc.getAttribute('data-subtab') !== v) tc.setAttribute('data-subtab', v);
+    }
+    const rc = document.getElementById('rightContent');
+    if (rc) {
+      const v2 = (player.subtabs && player.subtabs[player.tab] && player.subtabs[player.tab].tabFormat) || '';
+      if (rc.getAttribute('data-subtab') !== v2) rc.setAttribute('data-subtab', v2);
+    }
+  }
+
   function update() {
+    syncSubtabAttrs();
     if (!container) container = document.getElementById('app');
     if (!container) return;
     try {
