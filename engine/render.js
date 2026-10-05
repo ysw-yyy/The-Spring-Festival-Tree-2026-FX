@@ -444,7 +444,13 @@ RT.smoothNumbers = (function () {
       let m = v.m, e = v.e;
       if (Math.abs(m) >= 10) { m /= 10; e += 1; }
       if (Math.abs(m) < 1 && m !== 0) { m *= 10; e -= 1; }
-      return shape.sign + m.toFixed(Math.min(dec, 8)) + 'e' + e;
+      // ★ 指数必须走引擎的 commaFormat：这里原来直接把指数拼成数字（"e11034"），
+      //   而引擎的 format() 是加千分位的（"e11,034"）。平滑模块随后会覆写 #points
+      //   的文本，于是页面上看到的就是不带逗号的那个 —— 用户实报"1e11000 以下正常、
+      //   再大逗号就没了"，差别只在指数是否够千位（10000 起才有逗号）。
+      const eStr = (typeof commaFormat === 'function')
+        ? commaFormat(new Decimal(e), 0) : String(e);
+      return shape.sign + m.toFixed(Math.min(dec, 8)) + 'e' + eStr;
     }
     const plain = Math.abs(v.e) < 15 ? v.m * Math.pow(10, v.e) : v.m;
     let out = plain.toFixed(Math.min(dec, 8));
