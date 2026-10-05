@@ -302,13 +302,24 @@ RT.system = (function () {
     const tc = document.getElementById('tabContent');
     if (tc) {
       const ll = player.navTab === 'none' ? player.tab : player.navTab;
-      const v = (cur && cur.layer === ll ? cur.id : '') || '';
+      // 点击时记的（RT.currentSubtab）优先；**刷新后它没有值** —— 那时回退到
+      // 存档里的子标签（player.subtabs）。否则属性会写成空串，
+      // 依赖 [data-subtab=...] 的规则静默失效（用户实报：时空裂隙页刷新后候选又出现）。
+      let v = (cur && cur.layer === ll ? cur.id : '') || '';
+      if (!v) {
+        const st = (player.subtabs && player.subtabs[ll]) || {};
+        v = st.tabFormat || st.mainTabs || '';
+      }
       if (tc.getAttribute('data-subtab') !== v) tc.setAttribute('data-subtab', v);
       if (tc.getAttribute('data-subtab') !== v && RT.rarityGlow) RT.rarityGlow.scan();
     }
     const rc = document.getElementById('rightContent');
     if (rc) {
-      const v2 = (cur && cur.layer === player.tab ? cur.id : '') || '';
+      let v2 = (cur && cur.layer === player.tab ? cur.id : '') || '';
+      if (!v2) {
+        const st2 = (player.subtabs && player.subtabs[player.tab]) || {};
+        v2 = st2.tabFormat || st2.mainTabs || '';
+      }
       if (rc.getAttribute('data-subtab') !== v2) rc.setAttribute('data-subtab', v2);
     }
   }
