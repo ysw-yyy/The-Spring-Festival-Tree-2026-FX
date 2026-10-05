@@ -1882,7 +1882,10 @@ button.upg.treeThing {
      宽度按视口收窄，高度改为跟随内容（至少一个边长），保证文字不被裁。
      aspect-ratio 必须一起关掉，否则它会和 min-height 一起把高度锁成正方形。 */
   .challenge {
-    aspect-ratio: 1 / 1 !important;
+    /* ★ 正方形只能当**下限**：不同挑战文案长度差很多（EC4 说明两行 + 奖励带补充说明），
+       强制 1/1 会把字挤到卡片外（用户实拍）。所以高度 = max(宽度, 内容需要) ——
+       内容少时是正方形，内容多时往下长，同排仍由 stretch 统一高度。 */
+    aspect-ratio: auto !important;
     height: auto !important;
     min-height: var(--challenge-size);
     /* 窄屏同样收字号：不收的话内容（336px）会超出正方形（311px）。
@@ -2253,9 +2256,10 @@ body,
    ========================================================================== */
 @media (min-width: 701px) {
   .challengeTable .challenge {
-    aspect-ratio: 1 / 1;
+    /* 同上：正方形是下限，不是上限 —— 内容超出就往下长，绝不裁字 */
+    aspect-ratio: auto;
     height: auto;
-    min-height: 0;
+    min-height: var(--challenge-size);
   }
 }
 
@@ -2282,4 +2286,46 @@ body,
   .challengeTable > .upgRow {
     grid-template-columns: 1fr !important;
   }
+}
+/* ==========================================================================
+   I37. 挑战卡各段间距改由 CSS 控制
+   --------------------------------------------------------------------------
+   引擎原来用 <br> 分隔"标题 / 按钮 / 说明 / 目标 / 奖励 / 当前"，
+   每个 <br> 占一整行（约 15px），5 个就是约 75px —— 这正是卡片偏高、
+   压不成正方形的原因。现在引擎不再压 <br>，改为把各段设成块级 + 可控外边距。
+   "目标: "是文本节点、无法设块级，但它夹在说明块与奖励块之间，自成一行。
+   ========================================================================== */
+.challenge > button,
+.challenge > .challengeDesc,
+.challenge > .challengeRewardLabel,
+.challenge > .challengeCurrent {
+  display: block;
+}
+
+.challenge > .challengeDesc {
+  margin: 2px 0;
+}
+
+.challenge > button {
+  margin: 2px 0;
+}
+
+.challenge > .challengeRewardLabel {
+  margin: 3px 0 0;
+}
+
+.challenge > .challengeCurrent {
+  margin: 3px 0 0;
+}
+/* ==========================================================================
+   I38. 定稿：挑战卡正方形（内容瘦身后可达）
+   --------------------------------------------------------------------------
+   I37 去掉 6 个分隔 <br> 之后，内容需求从约 259px 降到 148~175px，
+   而三列时每张宽 264px、两列 311~498px —— 余量充足，所以这里可以安全地强制 1/1。
+   写在最后，靠书写顺序压过前面几条 aspect-ratio 设置。
+   ========================================================================== */
+.challengeTable .challenge {
+  aspect-ratio: 1 / 1 !important;
+  height: auto !important;
+  min-height: 0 !important;
 }

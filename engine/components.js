@@ -239,33 +239,27 @@ RT.components = (function () {
     const classes = ['challenge', style];
     if (player[layer].activeChallenge === Number(data)) classes.push('resetNotify');
     const body = [];
-    body.push(h('br'));
     body.push(h('h3', { html: ch.name }));
     // challengeTightened：原来是成对 <br>（= 两行空行），间距过大把 EC1 顶到边框；
     // 收成单个。段间距交给 CSS 的内边距/行高控制。
-    body.push(h('br'));
     body.push(h('button', {
       class: 'longUpg can ' + layer,
       style: { 'background-color': tmp[layer].color },
       data: { act: 'startChallenge', layer: layer, id: String(data) },
     }, [text(challengeButtonText(layer, data))]));
-    body.push(h('br'));
     if (layers[layer].challenges[data].fullDisplay) {
       body.push(h('span', { class: 'challengeDesc', html: run(layers[layer].challenges[data].fullDisplay, layers[layer].challenges[data]) }));
     } else {
       body.push(h('span', { class: 'challengeDesc', html: ch.challengeDescription }));
-      body.push(h('br'));
-      body.push(text('目标:  '));
+        body.push(text('目标:  '));
       if (ch.goalDescription) {
         body.push(h('span', { html: ch.goalDescription }));
       } else {
         body.push(h('span', {}, [text(format(ch.goal) + ' ' + (ch.currencyDisplayName ? ch.currencyDisplayName : modInfo.pointsName))]));
       }
-      body.push(h('br'));
-      body.push(h('span', { class: 'challengeRewardLabel' }, [text('奖励: ')]));
+        body.push(h('span', { class: 'challengeRewardLabel' }, [text('奖励: ')]));
       body.push(h('span', { class: 'challengeReward', html: ch.rewardDescription }));
-      body.push(h('br'));
-      if (layers[layer].challenges[data].rewardDisplay !== undefined) {
+        if (layers[layer].challenges[data].rewardDisplay !== undefined) {
         // 给外层加类名即可："当前: "是文本节点、数值是内层 span，
         // 颜色从外层继承下去，两段一起染色（不必再包一层）。
         body.push(h('span', { class: 'challengeCurrent' }, [
