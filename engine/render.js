@@ -781,6 +781,8 @@ RT.smoothNumbers = (function () {
         if (!pe) continue;
         if (pe.classList.contains('rt-rarity')) continue;
         if (pe.id === 'points' || (pe.closest && pe.closest('#points'))) continue;
+        // 信息框（说明/剧情）里的文字按用户要求不变色 —— 那几处只是叙述里提到稀有度。
+        if (pe.closest && pe.closest('.story, .infobox, .story-text, .story-title')) continue;
         RE.lastIndex = 0;
         if (RE.test(text)) jobs.push(node);
       }
