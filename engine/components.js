@@ -250,6 +250,11 @@ RT.components = (function () {
         (ch.rewardDescription && String(ch.rewardDescription).indexOf('挑战中无效') >= 0)) {
       classes.push('rt-reward-void');
     }
+    // rt-in-challenge：当前**有任意挑战在跑**。EC5 的奖励在任何挑战里都无效，
+    // 不只是 EC5 自己生效时，所以判据不能只看这一张卡的状态（用户明确要求）。
+    if (player[layer].activeChallenge !== undefined && player[layer].activeChallenge !== null) {
+      classes.push('rt-in-challenge');
+    }
     const body = [];
     body.push(h('h3', { html: ch.name }));
     // challengeTightened：原来是成对 <br>（= 两行空行），间距过大把 EC1 顶到边框；

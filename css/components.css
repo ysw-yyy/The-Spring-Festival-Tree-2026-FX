@@ -2362,10 +2362,8 @@ body,
    把奖励的标签与数值一起划掉、变灰、去掉金色发光与呼吸。
    不在挑战中时保持原样（金色发光呼吸），因为那时奖励是有效的。
    ========================================================================== */
-.challenge.rt-reward-void.resetNotify > .challengeRewardLabel,
-.challenge.rt-reward-void.resetNotify > .challengeReward,
-.challenge.rt-reward-void.rt-challenge-live > .challengeRewardLabel,
-.challenge.rt-reward-void.rt-challenge-live > .challengeReward {
+.challenge.rt-reward-void.rt-in-challenge > .challengeRewardLabel,
+.challenge.rt-reward-void.rt-in-challenge > .challengeReward {
   text-decoration: line-through;
   text-decoration-thickness: 1px;
   color: #8b9096 !important;
