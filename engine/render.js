@@ -752,8 +752,9 @@ RT.smoothNumbers = (function () {
   //   先把整行文字收进**一个** span（.rt-line，单个 flex 项），下一次扫描再在它内部上色。
   RT.rarityGlow = (function () {
     const WORDS = { '普通': 'rt-r-common', '稀有': 'rt-r-rare', '史诗': 'rt-r-epic', '传说': 'rt-r-legend' };
-    const INLINE_RE = /(普通|稀有|史诗|传说)(?=结晶|永久化|\])/;
-    const INLINE_RE_G = /(普通|稀有|史诗|传说)(?=结晶|永久化|\])/g;
+    // 语境放宽：『普通·永久化』（间隔号）、『是普通，』（逗号/顿号）原本都匹配不到，
+    const INLINE_RE = /(普通|稀有|史诗|传说)(?=[·・]?永久化|结晶|\]|，|、)/;
+    const INLINE_RE_G = /(普通|稀有|史诗|传说)(?=[·・]?永久化|结晶|\]|，|、)/g;
     let timer = null;
 
     function hosts() {
