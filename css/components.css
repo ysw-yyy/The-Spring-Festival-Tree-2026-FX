@@ -2159,11 +2159,22 @@ body,
 }
 
 /* 行容器消失后，卡片之间需要自己的间距 */
+/* ★ 用**固定三列的 grid**，而不是 flex + wrap：
+   - 基础 .upgTable 是 column 方向的 flex，卡片会排成一列（用户实拍"还是一列"）；
+   - 改成 flex row + wrap 后虽然横向了，但实测每排张数不齐（1/3/2 这种）。
+   grid 三列则严格每排三张，且顺序就是 DOM 顺序（行容器已 display:contents，连续排布）。 */
 .challengeTable {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
+  display: block !important;   /* 排布交给每一行自己，外层只做容器 */
+}
+
+/* grid 单元格里让卡片撑满单元格宽度（上限 420），高度按内容 */
+.challengeTable .challenge {
+  width: 100% !important;
+  max-width: 420px;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
 }
 /* ==========================================================================
    I33. 挑战一排三个
@@ -2194,4 +2205,33 @@ body,
     font-size: 11px;
     padding: 3px 6px;
   }
+}
+/* ==========================================================================
+   I34. 挑战：每个内容行 = 三列 grid（最终定稿）
+   --------------------------------------------------------------------------
+   上面几条尝试过的做法都记在这里，避免以后重复踩：
+   · 行容器 display:contents + 外层 flex/grid 合流 → 实测真实 DOM 里首张卡仍独占一行
+     （分布 1/3/2），排不齐；
+   · 外层 flex row + wrap → 每排张数不齐；
+   · 最终：**每个内容行自己就是三列 grid**。内容层每行正好 3 个挑战
+     （id 11/12/13 一行、21/22/23 一行…），所以"每行三列"必然得到
+     "每排三张"，且永远不会出现 EC3 落单 / EC4 领下一行的错位。
+   ========================================================================== */
+.challengeTable > .upgRow {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px;
+  justify-items: center;
+  align-items: start;
+  margin-bottom: 6px;
+}
+
+/* grid 单元格内让卡片撑满（上限去掉，宽度由单元格决定） */
+.challengeTable .challenge {
+  width: 100% !important;
+  max-width: none;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
 }
