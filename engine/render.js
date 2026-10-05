@@ -742,75 +742,52 @@ RT.smoothNumbers = (function () {
     };
   })();
 
-  // ---- 稀有度词发光 ---------------------------------------------------------
-  // 内容层是纯 HTML（无类名），CSS 也没法按文字选择，所以这里扫一遍：
-  //   a) 整格就是稀有度的（列表里的 [普通] / [稀有]）→ 直接给元素打类；
-  //   b) 词嵌在长句里的（"普通结晶: 36.34"、"普通☆永久化"）→ 只把那个词包成 span。
-  // ★ flex 父级的坑：那几行（如升级卡的 "Cost: 50 稀有结晶"）父级是 flex，
-  //   直接插 span 会让 span 与相邻文字各自成为 **flex 项** → 一个词占一行，
-  //   且每次重渲染后重新包裹表现为"来回闪"。所以遇到 flex 父级时，
-  //   先把整行文字收进**一个** span（.rt-line，单个 flex 项），下一次扫描再在它内部上色。
+  // ---- 稀有度词染色（简化版） ------------------------------------------------
+  // 用户要求：Y 层里的『普通 / 稀有 / 史诗 / 传说』一律染色，不再按语境判断；
+  // 排除『剧情』子标签；且不能出现『一瞬间无色』。
+  // 之前为什么会闪：游戏每拍重渲染会清掉我包的那层 span，而我用的是定时扫描，
+  // 中间那几毫秒就是白的。现在扫描接在引擎渲染之后、**同一帧内**执行
+  // （见 boot.js：RT.system.update() 之后立刻 scan()），画出来的第一帧就有色。
   RT.rarityGlow = (function () {
     const WORDS = { '普通': 'rt-r-common', '稀有': 'rt-r-rare', '史诗': 'rt-r-epic', '传说': 'rt-r-legend' };
-    // 语境放宽：『普通·永久化』（间隔号）、『是普通，』（逗号/顿号）原本都匹配不到，
-    const INLINE_RE = /(普通|稀有|史诗|传说)(?=[·・]?永久化|结晶|\]|，|、)/;
-    const INLINE_RE_G = /(普通|稀有|史诗|传说)(?=[·・]?永久化|结晶|\]|，|、)/g;
+    const RE = /(普通|稀有|史诗|传说)/g;
     let timer = null;
+
+    function skipNow() {
+      const cur = RT.currentSubtab;
+      if (cur && cur.id && String(cur.id).indexOf('剧情') >= 0) return true;
+      return false;
+    }
 
     function hosts() {
       const out = [];
-      const a = document.getElementById('tabContent');
-      const b = document.getElementById('rightContent');
-      if (a) out.push(a);
-      if (b) out.push(b);
-      return out.length ? out : [document.body];
+      const rc = document.getElementById('rightContent');
+      const tc = document.getElementById('tabContent');
+      if (rc) out.push(rc);
+      if (tc) out.push(tc);
+      return out;
     }
 
-    function tagWholeCell(host) {
-      const all = host.querySelectorAll('span, div, b, p');
-      for (let i = 0; i < all.length; i++) {
-        const e = all[i];
-        if (e.children.length) continue;
-        const t = (e.textContent || '').trim();
-        const m = /^\[?(普通|稀有|史诗|传说)\]?$/.exec(t);
-        if (m && !e.classList.contains('rt-rarity')) e.classList.add('rt-rarity', WORDS[m[1]]);
-      }
-    }
-
-    function collect(host) {
+    function scanHost(host) {
       const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null);
       const jobs = [];
       while (walker.nextNode()) {
         const node = walker.currentNode;
         const text = node.nodeValue || '';
-        if (!text) continue;
+        if (!text || text.length > 400) continue;
         const pe = node.parentElement;
         if (!pe) continue;
-        if (pe.classList.contains('rt-rarity') || pe.id === 'points') continue;
-        if (INLINE_RE.test(text)) jobs.push(node);
+        if (pe.classList.contains('rt-rarity')) continue;
+        if (pe.id === 'points' || (pe.closest && pe.closest('#points'))) continue;
+        RE.lastIndex = 0;
+        if (RE.test(text)) jobs.push(node);
       }
-      return jobs;
-    }
-
-    function wrapWords(host) {
-      collect(host).forEach(function (node) {
-        const parent = node.parentElement;
-        if (!parent) return;
-        // flex 父级：先把整行收进一个 span，本轮不再动它（下一轮在 rt-line 内部处理）
-        if (getComputedStyle(parent).display.indexOf('flex') >= 0) {
-          if (!parent.querySelector(':scope > .rt-line')) {
-            const line = document.createElement('span');
-            line.className = 'rt-line';
-            while (parent.firstChild) line.appendChild(parent.firstChild);
-            parent.appendChild(line);
-          }
-          return;
-        }
+      jobs.forEach(function (node) {
         const text = node.nodeValue || '';
         const frag = document.createDocumentFragment();
         let last = 0, m;
-        INLINE_RE_G.lastIndex = 0;
-        while ((m = INLINE_RE_G.exec(text)) !== null) {
+        RE.lastIndex = 0;
+        while ((m = RE.exec(text)) !== null) {
           if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
           const span = document.createElement('span');
           span.className = 'rt-rarity ' + WORDS[m[1]];
@@ -825,15 +802,36 @@ RT.smoothNumbers = (function () {
     }
 
     function scan() {
-      try {
-        hosts().forEach(function (h) { tagWholeCell(h); wrapWords(h); });
-      } catch (e) {}
+      if (skipNow()) return;
+      try { hosts().forEach(scanHost); } catch (e) {}
+    }
+
+    let obs = null;
+    function schedule() {
+      // Vue 是**异步**打补丁的（微任务里），所以"渲染后立刻扫"仍会漏一拍，
+      // 那一拍就是用户看到的白闪。MutationObserver 在 DOM 变更后马上回调，
+      // 正好落在补丁之后 —— 这才是消除白闪的关键。
+      if (obs === null) return;
+      scan();
+    }
+    function attach() {
+      if (obs || typeof MutationObserver === 'undefined') return;
+      obs = new MutationObserver(function () { schedule(); });
+      hosts().forEach(function (h) {
+        try { obs.observe(h, { childList: true, subtree: true, characterData: true }); } catch (e) {}
+      });
     }
 
     return {
-      // 120ms：游戏每拍重渲染会清掉包裹层，间隔太长会看到"先白、过一会才变色"。
-      start() { if (timer === null) timer = setInterval(scan, 120); scan(); },
-      stop() { if (timer !== null) { clearInterval(timer); timer = null; } },
+      start() {
+        scan();
+        attach();
+        if (timer === null) timer = setInterval(function () { attach(); scan(); }, 1000);
+      },
+      stop() {
+        if (timer !== null) { clearInterval(timer); timer = null; }
+        if (obs) { try { obs.disconnect(); } catch (e) {} obs = null; }
+      },
       scan: scan,
     };
   })();

@@ -20,6 +20,9 @@ function startMainLoop() {
       if (!RT.debug.endedRendered) {
         RT.debug.endedRendered = true;
         RT.system.update();
+  // 稀有度染色必须紧跟渲染：游戏每拍会重写文本（清掉我包的那层 span），
+  // 定时扫描会留下几毫秒的白字；同一帧内补上就看不到无色瞬间。
+  if (RT.rarityGlow) RT.rarityGlow.scan();
       // ★ 必须在 vdom 渲染**之后**重绘：这一拍 DOM 已经是新标签的内容，
       //   矩形正确 → 进页面立刻有线、切标签同一帧换新线（不再残留旧线）。
       if (needCanvasUpdate) {
