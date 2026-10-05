@@ -797,6 +797,13 @@ RT.smoothNumbers = (function () {
           const bare = m[1].replace(/[\[\]]/g, '');
           span.className = 'rt-rarity ' + WORDS[bare];
           span.textContent = m[1];
+          // 带方括号的标签（列表/候选卡里的 [普通]）：在它**前面**插一个 <br>。
+          // 用户要求『稀有度前面一定要换行』（规避排版错乱），同时又要求
+          // 『稀有度要和 ID 同一行』——所以断点必须在标签**之前**，而不是让标签
+          // 自己变成块级（那样后面的 [ID:n] 会被推到再下一行）。
+          if (m[1].indexOf('[') >= 0) {
+            frag.appendChild(document.createElement('br'));
+          }
           frag.appendChild(span);
           last = m.index + m[1].length;
         }
