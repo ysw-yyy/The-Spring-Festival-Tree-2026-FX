@@ -782,8 +782,8 @@ RT.smoothNumbers = (function () {
         RE.lastIndex = 0;
         if (RE.test(text)) jobs.push(node);
       }
-      jobs.forEach(function (node) {
-        const text = node.nodeValue || '';
+      // 把一段文字上色，产物塞进 container
+      function paint(container, text) {
         const frag = document.createDocumentFragment();
         let last = 0, m;
         RE.lastIndex = 0;
@@ -795,8 +795,27 @@ RT.smoothNumbers = (function () {
           frag.appendChild(span);
           last = m.index + m[1].length;
         }
-        if (!last) return;
-        if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        if (!last) { frag.appendChild(document.createTextNode(text)); }
+        else if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        container.appendChild(frag);
+      }
+
+      jobs.forEach(function (node) {
+        const text = node.nodeValue || '';
+        const parent = node.parentElement;
+        if (!parent) return;
+        // ★ flex 父级（升级卡的 "Cost: 50 稀有结晶" 就是）：
+        //   直接往里面插 span 会让它和相邻文字各自成为 **flex 项** → 一个词一行。
+        //   所以先把整个文本节点包进**一个** span（仍是 1 个 flex 项），再在它内部上色。
+        if (getComputedStyle(parent).display.indexOf('flex') >= 0) {
+          const line = document.createElement('span');
+          line.className = 'rt-line';
+          parent.replaceChild(line, node);
+          paint(line, text);
+          return;
+        }
+        const frag = document.createDocumentFragment();
+        paint(frag, text);
         if (node.parentNode) node.parentNode.replaceChild(frag, node);
       });
     }
