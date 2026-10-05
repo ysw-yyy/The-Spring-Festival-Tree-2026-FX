@@ -244,6 +244,12 @@ RT.components = (function () {
     if (inChallenge(layer, data) && player[layer].activeChallenge !== Number(data)) {
       classes.push('rt-challenge-live');
     }
+    // rt-reward-void：奖励在挑战期间无效的（内容层文案里写着"在挑战中无效"）。
+    // 类加在卡片上，样式里再配合"当前生效"的状态，把奖励那一行划掉变灰。
+    if ((options.voidRewardChallenges || []).indexOf(Number(data)) >= 0 ||
+        (ch.rewardDescription && String(ch.rewardDescription).indexOf('挑战中无效') >= 0)) {
+      classes.push('rt-reward-void');
+    }
     const body = [];
     body.push(h('h3', { html: ch.name }));
     // challengeTightened：原来是成对 <br>（= 两行空行），间距过大把 EC1 顶到边框；

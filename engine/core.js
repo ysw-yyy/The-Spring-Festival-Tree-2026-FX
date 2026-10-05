@@ -157,6 +157,10 @@ RT.config = {
     boughtFlash: true,
     // 窄于这个宽度就自动进单标签页（内容整屏显示，树用返回按钮回去）
     oneTabWidth: 1024,
+    // 奖励在挑战期间无效的挑战 id。内容层里只有 EC5 的奖励文案带
+    // “在挑战中无效”，但 EC4 的奖励在挑战里同样失效，
+    // 所以用显式名单声明，比去猜文案可靠。
+    voidRewardChallenges: [22],
     branchDashSpeed: 1.6,   // 每帧推进的偏移量（30fps 下约 48px/秒）
   },
   layout: {

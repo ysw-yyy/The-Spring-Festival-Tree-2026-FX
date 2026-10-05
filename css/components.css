@@ -2353,3 +2353,23 @@ body,
   color: #ff8177;
   text-shadow: 0 0 8px rgba(255, 90, 82, 0.45);
 }
+/* ==========================================================================
+   I40. 挑战生效期间，把"无效的奖励"划掉变灰
+   --------------------------------------------------------------------------
+   内容层给这类挑战的奖励文案写了"（在挑战中无效）"（EC4/EC5 等），
+   引擎据此给卡片加 .rt-reward-void。这里再配合"当前正在生效"的状态
+   （.resetNotify = 你进入的那个，.rt-challenge-live = 被同时带进来的），
+   把奖励的标签与数值一起划掉、变灰、去掉金色发光与呼吸。
+   不在挑战中时保持原样（金色发光呼吸），因为那时奖励是有效的。
+   ========================================================================== */
+.challenge.rt-reward-void.resetNotify > .challengeRewardLabel,
+.challenge.rt-reward-void.resetNotify > .challengeReward,
+.challenge.rt-reward-void.rt-challenge-live > .challengeRewardLabel,
+.challenge.rt-reward-void.rt-challenge-live > .challengeReward {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: #8b9096 !important;
+  text-shadow: none !important;
+  animation: none !important;
+  opacity: 0.85;
+}
