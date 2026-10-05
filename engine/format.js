@@ -12,7 +12,10 @@ function exponentialFormat(num, precision, mantissa) {
   if (mantissa === undefined) mantissa = true;
   let e = num.log10().floor();
   let m = num.div(Decimal.pow(10, e));
-  if (m.toStringWithDecimalPlaces(precision) == 10) {
+  // 进位判断改成**数值**比较：原来是拿四舍五入后的字符串和数字 10 做 == 比较，
+  // 依赖隐式类型转换；只要尾数四舍五入到 10（如 9.9e11034）就必须进位成 1e(指数+1)，
+  // 否则会出现 "10e11034" 这种非规范写法（用户实拍）。数值判断与精度无关。
+  if (m.gte(10) || Number(m.toStringWithDecimalPlaces(precision)) >= 10) {
     m = decimalOne;
     e = e.add(1);
   }
