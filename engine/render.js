@@ -444,13 +444,22 @@ RT.smoothNumbers = (function () {
       let m = v.m, e = v.e;
       if (Math.abs(m) >= 10) { m /= 10; e += 1; }
       if (Math.abs(m) < 1 && m !== 0) { m *= 10; e -= 1; }
+      // ★ 进位必须在**四舍五入之后**再判一次：m = 9.6、dec = 0 时上面的
+      //   `>= 10` 为 false，但 toFixed(0) 会把它写成 "10"，于是输出 "10e11547"
+      //   （用户实报的 10e 问题，就是这么来的）。format.js 里修过同一个坑，
+      //   这里是平滑模块的另一套格式化，必须各自修。
+      let outM = m.toFixed(Math.min(dec, 8));
+      if (Math.abs(parseFloat(outM)) >= 10) {
+        outM = (parseFloat(outM) / 10).toFixed(Math.min(dec, 8));
+        e += 1;
+      }
       // ★ 指数必须走引擎的 commaFormat：这里原来直接把指数拼成数字（"e11034"），
       //   而引擎的 format() 是加千分位的（"e11,034"）。平滑模块随后会覆写 #points
       //   的文本，于是页面上看到的就是不带逗号的那个 —— 用户实报"1e11000 以下正常、
       //   再大逗号就没了"，差别只在指数是否够千位（10000 起才有逗号）。
       const eStr = (typeof commaFormat === 'function')
         ? commaFormat(new Decimal(e), 0) : String(e);
-      return shape.sign + m.toFixed(Math.min(dec, 8)) + 'e' + eStr;
+      return shape.sign + outM + 'e' + eStr;
     }
     const plain = Math.abs(v.e) < 15 ? v.m * Math.pow(10, v.e) : v.m;
     let out = plain.toFixed(Math.min(dec, 8));
