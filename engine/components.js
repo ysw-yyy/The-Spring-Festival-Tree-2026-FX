@@ -238,6 +238,12 @@ RT.components = (function () {
     const style = challengeStyle(layer, data);
     const classes = ['challenge', style];
     if (player[layer].activeChallenge === Number(data)) classes.push('resetNotify');
+    // rt-challenge-live：这个挑战**当前正在生效**，但不是玩家点进去的那一个。
+    // EC7/EC8/EC9 这类会"同时进入 EC1、EC2、EC3"的挑战，进入后队友也在生效，
+    // 界面上要能看出来（用户要求标红）。判据直接复用引擎自己的 inChallenge()。
+    if (inChallenge(layer, data) && player[layer].activeChallenge !== Number(data)) {
+      classes.push('rt-challenge-live');
+    }
     const body = [];
     body.push(h('h3', { html: ch.name }));
     // challengeTightened：原来是成对 <br>（= 两行空行），间距过大把 EC1 顶到边框；
