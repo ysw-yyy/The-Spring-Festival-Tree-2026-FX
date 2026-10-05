@@ -1875,7 +1875,7 @@ button.upg.treeThing {
     --upg-size: 124px;
     --tree-node: min(150px, calc((100vw - 40px) / 2));
     --ach-size: 92px;
-    --challenge-size: min(460px, calc(100vw - 32px));
+    --challenge-size: clamp(150px, calc((100% - 2 * var(--gap, 6px)) / 3), 420px);
   }
 
   /* 手机上正方形不可能同时满足"边长达标"和"内容放得下"：
@@ -2176,7 +2176,7 @@ body,
    ========================================================================== */
 @media (min-width: 701px) {
   .challenge {
-    --challenge-size: min(420px, calc((100% - 2 * var(--gap, 6px)) / 3));
+    --challenge-size: clamp(150px, calc((100% - 2 * var(--gap, 6px)) / 3), 420px);
     width: var(--challenge-size);
     height: auto;
     aspect-ratio: auto;
