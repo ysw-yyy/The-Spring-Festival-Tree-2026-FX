@@ -743,15 +743,19 @@ RT.smoothNumbers = (function () {
   })();
 
   // ---- 稀有度词发光 ---------------------------------------------------------
-  // 三处都是内容层的自定义 HTML：已解锁列表/候选列表里的『[普通]』『[稀有]』标签，
-  // 以及『普通结晶: 36.34』『普通☆永久化』这种**词嵌在长句里**的。
-  // 前一种整格就是稀有度，直接打类；后一种 CSS 选不中（不能按文字匹配），
-  // 所以只把这个词单独包一层 span 再上色 —— 词本身是静态的（稀有度不会变），
-  // 即使游戏每 tick 重写行内数字也不影响。
+  // 内容层是纯 HTML（无类名），CSS 也没法按文字选择，所以这里扫一遍：
+  //   a) 整格就是稀有度的（列表里的 [普通] / [稀有]）→ 直接给元素打类；
+  //   b) 词嵌在长句里的（"普通结晶: 36.34"、"普通☆永久化"）→ 只把那个词包成 span。
+  // ★ flex 父级的坑：那几行（如升级卡的 "Cost: 50 稀有结晶"）父级是 flex，
+  //   直接插 span 会让 span 与相邻文字各自成为 **flex 项** → 一个词占一行，
+  //   且每次重渲染后重新包裹表现为"来回闪"。所以遇到 flex 父级时，
+  //   先把整行文字收进**一个** span（.rt-line，单个 flex 项），下一次扫描再在它内部上色。
   RT.rarityGlow = (function () {
-    const WORDS = ['传说', '史诗', '稀有', '普通'];      // 长的在前
-    const CLS = { '普通': 'rt-r-common', '稀有': 'rt-r-rare', '史诗': 'rt-r-epic', '传说': 'rt-r-legend' };
+    const WORDS = { '普通': 'rt-r-common', '稀有': 'rt-r-rare', '史诗': 'rt-r-epic', '传说': 'rt-r-legend' };
+    const INLINE_RE = /(普通|稀有|史诗|传说)(?=结晶|永久化|\])/;
+    const INLINE_RE_G = /(普通|稀有|史诗|传说)(?=结晶|永久化|\])/g;
     let timer = null;
+
     function hosts() {
       const out = [];
       const a = document.getElementById('tabContent');
@@ -760,56 +764,73 @@ RT.smoothNumbers = (function () {
       if (b) out.push(b);
       return out.length ? out : [document.body];
     }
-    function tagWholeCell() {
-      hosts().forEach(function (host) {
-        const all = host.querySelectorAll('span, div, b, p');
-        for (let i = 0; i < all.length; i++) {
-          const e = all[i];
-          if (e.children.length) continue;
-          const t = (e.textContent || '').trim();
-          const m = /^\[?(普通|稀有|史诗|传说)\]?$/.exec(t);
-          if (m && !e.classList.contains('rt-rarity')) {
-            e.classList.add('rt-rarity', CLS[m[1]]);
+
+    function tagWholeCell(host) {
+      const all = host.querySelectorAll('span, div, b, p');
+      for (let i = 0; i < all.length; i++) {
+        const e = all[i];
+        if (e.children.length) continue;
+        const t = (e.textContent || '').trim();
+        const m = /^\[?(普通|稀有|史诗|传说)\]?$/.exec(t);
+        if (m && !e.classList.contains('rt-rarity')) e.classList.add('rt-rarity', WORDS[m[1]]);
+      }
+    }
+
+    function collect(host) {
+      const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null);
+      const jobs = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const text = node.nodeValue || '';
+        if (!text) continue;
+        const pe = node.parentElement;
+        if (!pe) continue;
+        if (pe.classList.contains('rt-rarity') || pe.id === 'points') continue;
+        if (INLINE_RE.test(text)) jobs.push(node);
+      }
+      return jobs;
+    }
+
+    function wrapWords(host) {
+      collect(host).forEach(function (node) {
+        const parent = node.parentElement;
+        if (!parent) return;
+        // flex 父级：先把整行收进一个 span，本轮不再动它（下一轮在 rt-line 内部处理）
+        if (getComputedStyle(parent).display.indexOf('flex') >= 0) {
+          if (!parent.querySelector(':scope > .rt-line')) {
+            const line = document.createElement('span');
+            line.className = 'rt-line';
+            while (parent.firstChild) line.appendChild(parent.firstChild);
+            parent.appendChild(line);
           }
+          return;
         }
+        const text = node.nodeValue || '';
+        const frag = document.createDocumentFragment();
+        let last = 0, m;
+        INLINE_RE_G.lastIndex = 0;
+        while ((m = INLINE_RE_G.exec(text)) !== null) {
+          if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+          const span = document.createElement('span');
+          span.className = 'rt-rarity ' + WORDS[m[1]];
+          span.textContent = m[1];
+          frag.appendChild(span);
+          last = m.index + m[1].length;
+        }
+        if (!last) return;
+        if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        if (node.parentNode) node.parentNode.replaceChild(frag, node);
       });
     }
-    function wrapInlineWord() {
-      hosts().forEach(function (host) {
-        const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null);
-        const jobs = [];
-        while (walker.nextNode()) {
-          const node = walker.currentNode;
-          const s = node.nodeValue || '';
-          if (!s) continue;
-          const pe = node.parentElement;
-          if (pe && (pe.classList.contains('rt-rarity') || pe.id === 'points')) continue;
-          // 只在"稀有度词 + 结晶/永久化"这种明确语境里包，避免误伤普通叙述文字
-          if (/(普通|稀有|史诗|传说)(?=结晶|永久化|\])/.test(s)) jobs.push(node);
-        }
-        jobs.forEach(function (node) {
-          const s = node.nodeValue || '';
-          const re = /(普通|稀有|史诗|传说)(?=结晶|永久化|\])/g;
-          const frag = document.createDocumentFragment();
-          let last = 0, m;
-          while ((m = re.exec(s)) !== null) {
-            if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
-            const span = document.createElement('span');
-            span.className = 'rt-rarity ' + CLS[m[1]];
-            span.textContent = m[1];
-            frag.appendChild(span);
-            last = m.index + m[1].length;
-          }
-          if (last === 0) return;
-          if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
-          if (node.parentNode) node.parentNode.replaceChild(frag, node);
-        });
-      });
+
+    function scan() {
+      try {
+        hosts().forEach(function (h) { tagWholeCell(h); wrapWords(h); });
+      } catch (e) {}
     }
-    function scan() { try { tagWholeCell(); wrapInlineWord(); } catch (e) {} }
+
     return {
-      // 120ms：游戏每拍重渲染会把我包的 span 清掉，间隔太长就会看到白->变色（用户实报）。
-      // 单次扫描只走内容区的文本节点，实测开销很小。
+      // 120ms：游戏每拍重渲染会清掉包裹层，间隔太长会看到"先白、过一会才变色"。
       start() { if (timer === null) timer = setInterval(scan, 120); scan(); },
       stop() { if (timer !== null) { clearInterval(timer); timer = null; } },
       scan: scan,
