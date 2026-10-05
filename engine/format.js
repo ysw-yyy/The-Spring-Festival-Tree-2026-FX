@@ -17,8 +17,12 @@ function exponentialFormat(num, precision, mantissa) {
     e = e.add(1);
   }
   if (e.gte(1e9)) e = format(e, 3);
-  else if (e.gte(10000)) e = commaFormat(e, 0);
-  else e = e.toStringWithDecimalPlaces(0);
+  // 统一加千分位：原来只有指数 >= 10000 才走 commaFormat（<10000 走纯数字），
+  // 于是指数在 9999 附近来回时显示会在 "e9999" 与 "e10,000" 两种风格间跳
+  // （用户实报"航点超过 1e10000 逗号时隐时现"）。现在一律 commaFormat，
+  // <1000 本来就没有逗号，不受影响。这一处**刻意偏离**上游输出，
+  // 所以 format_parity 会在此区间报差异，属预期。
+  else e = commaFormat(e, 0);
   if (mantissa) return m.toStringWithDecimalPlaces(precision) + 'e' + e;
   return 'e' + e;
 }
