@@ -1882,9 +1882,14 @@ button.upg.treeThing {
      宽度按视口收窄，高度改为跟随内容（至少一个边长），保证文字不被裁。
      aspect-ratio 必须一起关掉，否则它会和 min-height 一起把高度锁成正方形。 */
   .challenge {
-    aspect-ratio: auto !important;
+    aspect-ratio: 1 / 1 !important;
     height: auto !important;
     min-height: var(--challenge-size);
+    /* 窄屏同样收字号：不收的话内容（336px）会超出正方形（311px）。
+       与 I30 的桌面档保持一致，正方形才装得下。 */
+    font-size: 11px;
+    line-height: 1.25;
+    padding: 6px;
   }
 
   /* 升级网格固定 3 列（忽略引擎按列数算出来的单元格宽度） */
@@ -2220,10 +2225,11 @@ body,
 .challengeTable > .upgRow {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 6px;
+  gap: 4px;                     /* 卡片间距（原 6px） */
   justify-items: center;
-  align-items: start;
-  margin-bottom: 6px;
+  /* ★ 同一排等高：stretch 让每张卡撑满所在 grid 行的高度（原来 start 会让它们各按内容高） */
+  align-items: stretch;
+  margin-bottom: 2px;           /* ★ 行间距缩小（原 6px） */
 }
 
 /* grid 单元格内让卡片撑满（上限去掉，宽度由单元格决定） */
@@ -2234,4 +2240,46 @@ body,
   height: auto;
   min-height: 0;
   aspect-ratio: auto;
+}
+/* ==========================================================================
+   I35. 挑战卡压成正方形（能容下才方）
+   --------------------------------------------------------------------------
+   实测：卡片内容需要的高度**与宽度无关，恒为 259px**（说明/目标/奖励/当前 + 标题 + 按钮）。
+   于是"正方形"的可行边界很清楚：
+     · 行宽 ≥ 790px  → 三列每张 ≥ 261px → 能容纳（261 ≥ 259）✓
+     · 行宽 625px    → 三列每张 206px ✗（差 53px）→ 只有把字号压到约 8px 才可能，不可读
+   所以：≥1250px 视口保持三列正方形；<1250px（分屏右栏或窄窗口）退成两列，
+   每张约 310px，同样能容纳正方形。列数是"能不能方"的代价，不是随意选的。
+   ========================================================================== */
+@media (min-width: 701px) {
+  .challengeTable .challenge {
+    aspect-ratio: 1 / 1;
+    height: auto;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1249px) {
+  .challengeTable > .upgRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+/* ==========================================================================
+   I36. 窄窗口/手机：正方形优先，列数按"能否容纳"决定
+   --------------------------------------------------------------------------
+   内容恒需 259px 高，所以每张卡宽度必须 ≥ 约 260 才能是正方形：
+     容器 ≥ 560  → 两列（每张 ≥ 274）✓
+     容器 <  560  → 一列（每张 ≈ 一整幅）✓
+   这样 625（你的窗口）、390（手机竖屏）都能得到正方形。
+   ========================================================================== */
+@media (max-width: 700px) {
+  .challengeTable > .upgRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 559px) {
+  .challengeTable > .upgRow {
+    grid-template-columns: 1fr !important;
+  }
 }
