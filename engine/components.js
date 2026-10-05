@@ -296,7 +296,7 @@ RT.components = (function () {
       }
       rowNodes.push(h('div', { class: 'upgRow' }, cells));
     }
-    return h('div', { class: 'upgTable' }, rowNodes);
+    return h('div', { class: 'upgTable challengeTable' }, rowNodes);
   }
 
   // ---- 可购买 ------------------------------------------------------------
