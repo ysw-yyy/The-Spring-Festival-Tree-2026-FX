@@ -2406,3 +2406,40 @@ body,
   from { background-position: 0 0; }
   to   { background-position: 12.73px 0; }
 }
+
+
+/* ==========================================================================
+   I44. 产量层（Yield）候选增益列表 / 空状态占位居中
+   --------------------------------------------------------------------------
+   实测（真存档、965 宽、单标签模式）：
+     · "候选增益："标签在 .upgTable.instant 里 → l=441，是居中的 ✓
+     · "无候选，请先重置"只在一个 .upgCol 里 → l=0、宽仅 113 ✗
+       （.upgCol 是 column flex，没有对齐约束，项被缩成贴合文字的窄块并贴左）
+   于是：给该层的 .upgCol 加水平居中（column 方向的 cross 轴 = 水平），
+   并让 .instant 包裹层成为整宽块，占位文字自己的 text-align:center 才生效。
+   用 [data-layer='Y'] 限定 —— 其它层的 .upgCol 一律不动（避免影响升级列等）。
+   ========================================================================== */
+[data-layer='Y'] .upgCol {
+  align-items: center !important;
+}
+
+/* !important 是必需的：实测窄块宽度来自更强制的东西（下面探针会打出祖先链），
+   不加就顶不掉，占位文字会继续贴在左边缘。 */
+[data-layer='Y'] .upgCol > .instant,
+[data-layer='Y'] .upgCol > span {
+  display: block !important;
+  width: 100% !important;
+}
+
+[data-layer='Y'] .upgCol > .instant > div,
+[data-layer='Y'] .upgCol > span > div {
+  width: 100% !important;
+}
+
+/* ★ 真正的卡点：占位文字与候选卡片的父级是**内联 display:flex** 的容器（内容层自己写的），
+   它们是其中的 flex 项 → 被缩成贴合文字的窄块并贴在 flex 起点（实测 p 宽 113、left 0）。
+   给这个容器加水平居中，占位文字（空列表）与候选卡片（有候选时）就都居中了 —— 这就是 1+2。
+   justify-content 对非 flex 容器无副作用，安全。 */
+[data-layer='Y'] .upgCol .instant > div {
+  justify-content: center;
+}

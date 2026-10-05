@@ -263,7 +263,7 @@ RT.system = (function () {
         h('br'), h('br'), h('br'), h('br'),
         // 左栏也带上它自己那一层的颜色（层内容根会有，但栏级装饰要用）
         h('div', {
-          attrs: { id: 'tabContent' },
+          attrs: { id: 'tabContent', 'data-layer': leftLayer || 'none' },
           style: { '--layer-color': (tmp[leftLayer] && tmp[leftLayer].color) || 'var(--aur-a)' },
         }, [RT.components.layerTab(leftLayer || 'none')]),
       ]));
@@ -274,7 +274,7 @@ RT.system = (function () {
           attrs: { id: 'rightTab' },
           style: {},
         }, [h('div', {
-          attrs: { id: 'rightContent' },
+          attrs: { id: 'rightContent', 'data-layer': player.tab || 'none' },
           style: { '--layer-color': (tmp[player.tab] && tmp[player.tab].color) || 'var(--aur-a)' },
         }, [RT.components.layerTab(player.tab, 'none', '50px')])]));
       }
