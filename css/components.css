@@ -2489,14 +2489,11 @@ body,
    扫描后给卡片打上 .rt-permanent。发光用**静态**阴影（卡片内容每 tick 重写，
    动画阴影会被不断打断，工作区红线）。
    ========================================================================== */
-.rt-permanent {
-  border-color: #ffcc4d !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 204, 77, 0.55),
-    inset 0 0 18px 4px rgba(255, 204, 77, 0.20),
-    0 0 16px rgba(255, 204, 77, 0.30) !important;
-}
-
+/* 只让文字金色发光：卡片边框/阴影保持游戏原样（之前加的盒子发光被用户否掉了 ——
+   『有点搞，我只要金色发光』）。仍旧是静态阴影（内容每 tick 重写）。 */
 .rt-permanent span {
-  text-shadow: 0 0 8px rgba(255, 204, 77, 0.45);
+  color: #ffcc4d;
+  text-shadow:
+    0 0 8px rgba(255, 204, 77, 0.55),
+    0 0 18px rgba(255, 204, 77, 0.28);
 }
