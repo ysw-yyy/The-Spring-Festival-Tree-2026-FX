@@ -172,7 +172,7 @@ RT.system = (function () {
       links,
       h('br'),
       h('br'),
-      text('游玩时间: ' + (player.timePlayed || 0)),
+      text('游玩时间: ' + formatTime(player.timePlayed || 0)),
       // ★ 按作者要求删掉了"热键："那一整块（说明文字 + 键位清单）。
       //   注意：**只删显示** —— 内容层定义的 hotkeys 仍然生效（options.js 的热键表照旧），
       //   所以按 p / n / w / y 这些键依旧能重置对应层级。
