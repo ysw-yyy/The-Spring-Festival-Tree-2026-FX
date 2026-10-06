@@ -172,7 +172,7 @@ RT.system = (function () {
       links,
       h('br'),
       h('br'),
-      text('游玩时间: ' + formatTime(player.timePlayed)),
+      text('游玩时间: ' + (player.timePlayed || 0)),
       // ★ 按作者要求删掉了"热键："那一整块（说明文字 + 键位清单）。
       //   注意：**只删显示** —— 内容层定义的 hotkeys 仍然生效（options.js 的热键表照旧），
       //   所以按 p / n / w / y 这些键依旧能重置对应层级。
@@ -215,13 +215,13 @@ RT.system = (function () {
   function endgameView() {
     return h('div', { class: 'fullWidth' }, [
       h('br'),
-      h('h2', {}, [text(modInfo.name + ' ' + VERSION.withoutName)]),
+      h('h2', {}, [text(modInfo.name + ' ' + (VERSION.withoutName || VERSION.name || ''))]),
       h('br'), h('br'),
       h('h3', { html: modInfo.winText }),
       h('br'),
       h('h3', {}, [text('可以前往 gityx.com 和 B站@QqQe308 找到作者！')]),
       h('br'), h('br'),
-      player.timePlayedReset ? null : h('div', {}, [text('你用了 ' + formatTime(player.timePlayed) + ' (游戏时间)通关！')]),
+      player.timePlayedReset ? null : h('div', {}, [text('你用了 ' + formatTime(player.timePlayed || 0) + ' (游戏时间)通关！')]),
       h('br'),
       h('button', { class: 'longUpg can', data: { act: 'hardReset' } }, [text('重新开始(不建议!)')]),
       text('\u00a0\u00a0\u00a0\u00a0'),

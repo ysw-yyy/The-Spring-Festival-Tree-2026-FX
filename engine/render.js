@@ -254,6 +254,10 @@ RT.delegation = (function () {
         break;
       case 'showNavTab': showNavTab(el.dataset.target); break;
       case 'goBack': goBack(el.dataset.layer); break;
+      // ★ 通关界面的『等待更新』按钮派发的就是这个动作；原先分发里没有这一条，
+      //   点了没反应 → 用户实报『等待更新按钮无法回到主界面』。
+      //   api.js 里的 keepGoing() 一直是好的（player.keepGoing = true）。
+      case 'keepGoing': keepGoing(); break;
       case 'subtab':
         // 记录当前子标签：data-subtab 需要它（player.subtabs 的族名不固定，
         // 实测点击后两个族都停在旧值，猜不出来就只能记）。
